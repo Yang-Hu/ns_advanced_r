@@ -1,0 +1,775 @@
+---
+title: "Chapter 2 Names and values"
+author: "Yang Hu"
+format: 
+    html:
+      self-contained: true
+      embed-resources: true
+
+number-sections: false
+code-annotations: hover
+    
+toc: true
+toc-title: "Contents"
+toc-location: "left"
+toc-depth: 4
+
+execute: 
+  freeze: auto
+  warning: true
+---
+
+
+## Introduction
+
+The goal of this chapter is to help you understand the distinction between names and values, and when R will copy an object.
+
+
+## Quiz
+
+1. Given the following data frame, how do I create a new column called “3” that contains the sum of 1 and 2? You may only use `$`, not` [[`. What makes `1`, `2`, and `3` challenging as variable names?
+
+```{r}
+df <- data.frame(runif(3), runif(3))
+names(df) <- c(1, 2)
+
+# My solution: 
+df$`3` <- df$`1` + df$`2`
+
+df
+```
+
+2. In the following code, how much memory does `y` occupy?
+```{r}
+x <- runif(1e6)
+y <- list(x, x, x)
+
+# Function to use:
+object.size(x); object.size(y)
+
+# Revise from section 2.4: Object size
+lobstr::obj_size(x); lobstr::obj_size(y)
+```
+
+Referenced from [Chapter 1](https://rdpeng.github.io/RProgDA/the-role-of-physical-memory.html) of the book 'Mastering Software Development in R'.
+
+
+3. On which line does `a` get copied in the following example?
+
+```{r}
+a <- c(1, 5, 3, 2)
+b <- a                # This step
+b[[1]] <- 10
+```
+
+
+## Prerequisites
+
+We’ll use the lobstr package to dig into the internal representation of R objects.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, dev = 'svg')  # set output device to svg
+
+library(lobstr)
+library(tidyverse)
+```
+
+
+## Binding basics
+
+Consider this code:
+
+```{r}
+x <- c(1, 2, 3)
+
+y <- x
+```
+
+It’s accurate to say that this code is doing two things:
+
+- It’s creating an object, a vector of values,` c(1, 2, 3)`.
+- And it’s binding that object to a name, `x`.
+
+In other words, **the object, or value, doesn’t have a name; it’s actually the name that has a value**. You can think of a name as a reference to a value. For example, if you run this code, you don’t get another copy of the value c(1, 2, 3), you get another binding to the existing object:
+
+:::{#fig-binding layour-ncol=2}
+![x](pic/binding-1.png){#fig-x fig-align="center" width=30%}
+
+![y](pic/binding-2.png){#fig-y fig-align="center" width=30%}
+
+Binding basics
+:::
+
+You might have noticed that the value `c(1, 2, 3)` has a label: `0x74b`. While the vector doesn’t have a name, I’ll occasionally need to refer to an object independent of its bindings. To make that possible, I’ll label values with a unique identifier. These identifiers have a special form that looks like the object’s memory “address”, *i.e.* the location in memory where the object is stored.
+
+You can access an object’s identifier with `lobstr::obj_addr()`. Doing so allows you to see that both x and y point to the same identifier:
+
+```{r}
+obj_addr(x)
+obj_addr(y)
+```
+
+These identifiers are long, and change every time you restart R.
+
+
+### Non-syntactic names
+
+R has strict rules about what constitutes a valid name. A **syntactic** name must consist of letters, digits, `.` and `_` but can’t begin with `_` or a digit.
+
+Additionally, you can’t use any of the reserved words like `TRUE`, `NULL`, `if`, and `function` (see the complete list in `?Reserved`). A name that doesn’t follow these rules is a **non-syntactic** name; if you try to use them, you’ll get an error.
+
+It’s possible to override these rules and use any name, i.e., any sequence of characters, by surrounding it with backticks `` ` ``[^backtick].
+
+[^backtick]: [Display backticks](https://stackoverflow.com/questions/55586867/how-to-put-in-markdown-an-inline-code-block-that-only-contains-a-backtick-char)
+
+While it’s unlikely you’d deliberately create such crazy names, you need to understand how these crazy names work because you’ll come across them, most commonly when you load data that has been created outside of R.
+
+
+### 2.2.2 Exercises
+
+1. Explain the relationship between `a`, `b`, `c` and `d` in the following code:
+
+```{r}
+a <- 1:10   # <1>
+b <- a      # <2>
+c <- b      # <3>
+d <- 1:10   # <4>
+```
+
+1. Create a vector from 1 to 10, and bind the name `a` with the value from this vector.  
+2. Create a new name `b`, its value is referenced to the existing name `a`.
+3. Create a new name `c`, its value is referenced to the existing name `a`.
+4. Create a vector from 1 to 10, and bind the name `d` with the value from this vector.  
+
+Verify the results:
+
+```{r}
+purrr::map(list(a, b, c, d), \(.x) {obj_addr(.x)})
+```
+
+
+2. The following code accesses the mean function in multiple ways. Do they all point to the same underlying function object? Verify this with `lobstr::obj_addr()`.
+
+```{r}
+#| eval: false
+mean
+base::mean
+get("mean")
+evalq(mean)
+match.fun("mean")
+```
+
+
+Verify the address:
+
+```{r}
+purrr::map(list(mean, base::mean, 
+                get("mean"), 
+                evalq(mean), 
+                match.fun("mean")), 
+           \(.x){obj_addr(.x)})
+```
+
+Based on the results, it seems to me that all of them are pointing to the same location of the object.
+
+
+3. By default, base R data import functions, like `read.csv()`, will automatically convert non-syntactic names to syntactic ones. Why might this be problematic? What option allows you to suppress this behaviour? *ars*[^ars]
+
+Column names are often data, and the underlying `make.names()` transformation is non-invertible, so the default behaviour corrupts data. To avoid this, set `check.names = FALSE`.
+
+[^ars]: Stands for solutions from the supplementary book '[Advanced R Solutions](https://advanced-r-solutions.rbind.io/)'.
+
+
+4. What rules does `make.names()` use to convert non-syntactic names into syntactic ones? *ars*
+
+Three main mechanisms ensure syntactically valid names (see ?make.names):
+
+Names that do not start with a letter or a dot will be prepended with an "X".
+
+```{r}
+make.names("")           # prepending "x"
+```
+
+The same holds for names that begin with a dot followed by a number.
+
+```{r}
+make.names(".1")         # prepending "X"
+```
+
+Additionally, non-valid characters are replaced by a dot.
+
+```{r}
+make.names("non-valid")  # "." replacement
+```
+
+```{r}
+make.names("@")          # prepending "X" + "." replacement 
+```
+
+```{r}
+make.names("  R")        # prepending "X" + ".." replacement
+```
+
+Reserved R keywords (see ?reserved) are suffixed by a dot.
+
+```{r}
+make.names("if")  # "." suffix
+```
+
+
+5. I slightly simplified the rules that govern syntactic names. Why is .123e1 not a syntactic name? Read `?make.names` for the full details. *ars*
+
+`.123e1` is not a syntactic name, because it starts with one dot which is followed by a number. This makes it a double, `1.23`.
+
+
+## Copy-on-modify
+
+Consider the following code. It binds `x` and `y` to the same underlying value, then modifies `y`:
+
+```{r}
+x <- c(1, 2, 3)
+y <- x
+
+# Check the address of each object:
+obj_addr(x)
+obj_addr(y)
+
+y[[3]] <- 4    # <1>
+```
+
+1. You should always use `[[` and `]]` to work with single element. 
+
+Modifying `y` clearly didn’t modify `x`. So what happened to the shared binding? While the value associated with `y` changed, the original object did not. Instead, R created a new object (a copy of the original `y` with one value changed), then rebound `y` to that object.
+
+```{r}
+# Compare the address after modification:
+obj_addr(y)
+```
+
+![](pic/binding-3.png){fig-align="center" width=30%}
+
+This behaviour is called **copy-on-modify**. Understanding it will radically improve your intuition about the performance of R code. A related way to describe this behaviour is to say that R objects are unchangeable, or **immutable**. However, I’ll generally avoid that term because there are a couple of important exceptions to copy-on-modify that you’ll learn about in Section 2.5.
+
+
+### `tracemem()`
+
+You can see when an object gets copied with the help of `base::tracemem()`. Once you call that function with an object, you’ll get the object’s current address:
+
+```{r}
+x <- c(1, 2, 3)
+
+tracemem(x)
+```
+
+From then on, whenever that object is copied, `tracemem()` will print a message telling you which object was copied, its new address, and the sequence of calls that led to the copy:
+
+```{r}
+y <- x
+y[[3]] <- 4L
+```
+
+`untracemem()` is the opposite of `tracemem()`; it turns tracing off.
+
+```{r}
+untracemem(x)
+```
+
+### Function calls
+
+The same rules for copying also apply to function calls. Take this code:
+
+```{r}
+f <- function(a) {
+  a
+}
+
+x <- c(1, 2, 3)
+
+tracemem(x)
+
+z <- f(x)   # there's no copy here!
+
+untracemem(x)
+```
+
+
+While `f()` is running, the `a` inside the function points to the same value as the `x` does outside the function:
+
+![](pic/binding-f1.png){fig-align="center" width=40%}
+
+In brief: the function `f()` is depicted by the yellow object on the right. It has a formal argument, `a`, which becomes a binding (indicated by dotted black line) in the execution environment (the gray box) when the function is run.
+
+Once `f()` completes, `x` and `z` will point to the same object. `0x74b` never gets copied because it never gets modified. If `f()` did modify `x`, R would create a new copy, and then z would bind that object.
+
+
+### Lists
+
+It’s not just names (*i.e.* variables) that point to values; elements of lists do too. Consider this list, which is superficially very similar to the numeric vector above:
+
+```{r}
+l1 <- list(1, 2, 3)
+```
+
+This list is more complex because instead of storing the values itself, it stores references to them:
+
+![](pic/list.png){fig-align="center" width=30%}
+
+This is particularly important when we modify a list:
+
+```{r}
+l2 <- l1
+```
+
+![](pic/l-modify-1.png){fig-align="center" width=30%}
+
+```{r}
+l2[[3]] <- 4
+```
+
+![](pic/l-modify-2.png){fig-align="center" width=30%}
+
+Like vectors, lists use copy-on-modify behaviour; the original list is left unchanged, and R creates a modified copy. This, however, is a **shallow** copy:[^gptshallow] the list object and its bindings are copied, but the values pointed to by the bindings are not. The opposite of a shallow copy is a deep copy where the contents of every reference are copied. Prior to R 3.1.0, copies were always deep copies.
+
+[^gptshallow]: In a shallow copy, the list object itself and its bindings (references to the elements) are copied, but the values pointed to by those bindings are not deeply copied. This means that if the list contains references to other objects (e.g., other lists or vectors), those referenced objects are not copied, and changes to the referenced objects will affect both the original and the modified list. This is in contrast to a deep copy, where all nested objects are also copied.
+
+To see values that are shared across lists, use `lobstr::ref()`. `ref()` prints the memory address of each object, along with a local ID so that you can easily cross-reference shared components.
+
+```{r}
+ref(l1, l2)
+```
+
+### Data frames
+
+Data frames are lists of vectors, so copy-on-modify has important consequences when you modify a data frame. Take this data frame as an example:
+
+```{r}
+d1 <- data.frame(x = c(1, 5, 6), y = c(2, 4, 3))
+```
+
+![](pic/dataframe.png){fig-align="center" width=30%}
+
+If you modify a column, only *that* column needs to be modified; the others will still point to their original references:
+
+```{r}
+d2 <- d1
+d2[, 2] <- d2[, 2] * 2
+```
+
+![](pic/d-modify-c.png){fig-align="center" width=30%}
+
+However, **if you modify a row, every column is modified, which means every column must be copied**:
+
+```{r}
+d3 <- d1
+d3[1, ] <- d3[1, ] * 3
+```
+
+![](pic/d-modify-r.png){fig-align="center" width=50%}
+
+
+###  Character vectors
+
+The final place that R uses references is with character vectors. I usually draw character vectors like this:
+
+```{r}
+x <- c("a", "a", "abc", "d")
+```
+
+![](pic/character.png){fig-align="center" width=60%}
+
+But this is a polite fiction. R actually uses a **global string pool** where each element of a character vector is a pointer to a unique string in the pool:
+
+![](pic/character-2.png){fig-align="center" width=50%}
+
+You can request that `ref()` show these references by setting the character argument to `TRUE`:
+
+
+```{r}
+ref(x, character = TRUE)
+```
+
+A discussion of the `string pool` mentioned in the text above:
+
+```{r}
+x <- c("R", "Shiny")
+
+ref(x, character = TRUE)
+
+y <- c("R", "Rainbow")
+
+ref(y, character = TRUE)
+```
+
+
+
+
+### 2.3.6 Exercises
+
+1. Why is `tracemem(1:10)` not useful? *ars*
+
+When `1:10` is called an object with an address in memory is created, but it is not bound to a name. Therefore, the object cannot be called or manipulated from R. As no copies will be made, it is not useful to track the object for copying.
+
+
+2. Explain why `tracemem()` shows two copies when you run this code. Hint: carefully look at the difference between this code and the code shown earlier in the section.
+
+```{r}
+x <- c(1L, 2L, 3L)
+tracemem(x)
+
+x[[3]] <- 4
+```
+Initially the vector x has integer type. The replacement call assigns a double to the third element of x, which triggers copy-on-modify.
+
+
+3. Sketch out the relationship between the following objects:
+
+```{r}
+a <- 1:10
+b <- list(a, a)
+c <- list(b, a, 1:10)
+```
+
+`a` contains a reference to an address with the value `1:10`. `b` contains a list of two references to the same address as `a`. `c` contains a list of `b` (containing two references to `a`), `a` (containing the same reference again) and a reference pointing to a different address containing the same value (`1:10`).
+
+![](pic/copy_on_modify_fig3.png){fig-align="center" width=30%}
+
+We can confirm these relationships by inspecting the reference tree in R.
+
+```{r}
+ref(c)
+```
+
+
+4. What happens when you run this code?
+
+```{r}
+x <- list(1:10)
+x[[2]] <- x
+```
+
+
+The initial reference tree of x shows that the name x binds to a list object. This object contains a reference to the integer vector 1:10.
+
+```{r}
+ref(x)
+```
+
+![](pic/copy_on_modify_fig1.png){fig-align="center" width=30%}
+
+When `x` is assigned to an element of itself, copy-on-modify takes place and the list is copied to a new address in memory.
+
+```{r}
+tracemem(x)
+x[[2]] <- x
+```
+
+The list object previously bound to `x` is now referenced in the newly created list object. It is no longer bound to a name. The integer vector is referenced twice.
+
+```{r}
+ref(x)
+```
+
+![](pic/copy_on_modify_fig2.png){fig-align="center" width=30%}
+
+
+## Object size
+
+You can find out how much memory an object takes with `lobstr::obj_size()`. Since the elements of lists are references to values, the size of a list might be much smaller than you expect:
+
+```{r}
+x <- runif(1e6)
+y <- list(x, x, x)
+
+# Function to use:
+obj_size(x); obj_size(y)
+```
+
+y is only 80 bytes bigger than x. That’s the size of an empty list with three elements:
+
+```{r}
+obj_size(list(NULL, NULL, NULL))
+```
+
+Similarly, because R uses a **global string pool**, character vectors take up less memory than you might expect: repeating a string 100 times does not make it take up 100 times as much memory.
+
+```{r}
+eric <- "Eric"
+
+single <- obj_size(eric) |> as.numeric()
+
+obj_size(rep(x = eric, times = 100))
+
+# A dataset for plot:
+plot_df <- tibble(
+  n_string = 1:1000,
+  math_size = n_string * as.numeric(obj_size(eric)),
+  obj_size = purrr::map(n_string, \(.x){obj_size(rep(x = eric, times = .x))}) |> unlist() |> as.numeric()) |> 
+  
+  pivot_longer(
+    cols = c(math_size, obj_size),
+    names_to = "type",
+    values_to = "size (B)"
+  ) |> 
+  
+  mutate(type_label = case_when(
+    n_string == 750 ~ type,
+    TRUE ~ NA_character_
+  ))
+
+# A dataset for label:
+label_df <- plot_df |> 
+  filter(n_string == 750) 
+
+# Plot:
+plot_df |> 
+  ggplot() +
+  geom_point(aes(x = n_string, y = `size (B)`, colour = type), show.legend = FALSE) +
+  
+  geom_label(
+    data = label_df,
+    aes(x = n_string, y = `size (B)`, label = type_label, color = type_label), show.legend = FALSE) +
+  
+  labs(x = "Number of repeated strings",
+       y = "Object size") +
+  
+  theme_bw() +
+  
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+```
+
+References also make it challenging to think about the size of individual objects. 
+
+`obj_size(x)` + `obj_size(y)` will only equal `obj_size(x, y)` if there are no shared values. Here, the combined size of `x` and `y` is the same as the size of `y`:
+
+```{r}
+obj_size(x, y)
+```
+
+Finally, R 3.5.0 and later versions have a feature that might lead to surprises: ALTREP, short for **alternative representation**. This allows R to represent certain types of vectors very compactly. The place you are most likely to see this is with `:` because **instead of storing every single number in the sequence, R just stores the first and last number.** This means that [every sequence, no matter how large, is the same size]{style="color:red;"}:
+
+```{r}
+obj_size(1:5)
+
+obj_size(1:1e3)
+
+obj_size(1:1e6)
+
+obj_size(1:1e9)
+```
+
+### 2.4.1 Exercises
+
+1. In the following example, why are `object.size(y)` and `obj_size(y)` so radically different? Consult the documentation of `object.size()`. *avs*
+
+```{r}
+y <- rep(list(runif(1e4), times = 100))
+
+object.size(y)
+
+obj_size(y)
+```
+
+`object.size()` doesn’t account for shared elements within lists. Therefore, the results differ by a factor of ~ 100.
+
+
+2. Take the following list. Why is its size somewhat misleading? *ars*
+
+```{r}
+funs <- list(mean, sd, var)
+obj_size(funs)
+#> 17,608 B
+```
+
+All three functions are built-in to R as part of the {base} and {stats} packages and hence always available. So, what does it mean to measure the size of something that’s already included in R? (more information please see *ars*)
+
+
+3. Predict the output of the following code:
+
+```{r}
+a <- runif(1e6)
+obj_size(a)
+
+b <- list(a, a)
+obj_size(b)
+obj_size(a, b)
+
+b[[1]][[1]] <- 10
+obj_size(b)
+obj_size(a, b)
+
+b[[2]][[1]] <- 10
+obj_size(b)
+obj_size(a, b)
+```
+
+In R (on most platforms) a length-0 vector has 48 bytes of overhead.
+
+```{r}
+obj_size(list())
+
+obj_size(double())
+
+obj_size(character())
+
+```
+
+A single double takes up an additional 8 bytes of memory.
+
+```{r}
+obj_size(double(length = 1))
+
+obj_size(double(length = 2))
+```
+
+So, a 1 million double should take up 8,000,048 bytes.
+
+```{r}
+a <- runif(1e6)
+obj_size(a)
+```
+
+For more detailed explanation, please see [ars](https://advanced-r-solutions.rbind.io/names-and-values.html).
+
+
+## Modify-in-place
+
+As we’ve seen above, modifying an R object usually creates a copy. There are two exceptions:
+
+- Objects with a single binding get a special performance optimisation.
+
+- Environments, a special type of object, are always modified in place.
+
+
+
+### Objects with a single binding 
+
+If an object has a single name bound to it, R will modify it in place:
+
+```{r}
+v <- c(1, 2, 3)
+
+obj_addr(v)
+
+v[[3]] <- 4
+
+obj_addr(v)
+```
+
+For loops have a reputation for being slow in R, but often that **slowness is caused by every iteration of the loop creating a copy**.
+
+**We can reduce the number of copies by using a list instead of a data frame**. Modifying a list uses internal C code, so the references are not incremented and only a single copy is made.
+
+While it’s not hard to determine when a copy is made, it is hard to prevent it. If you find yourself resorting to exotic tricks to avoid copies, it may be time to rewrite your function in C++, as described in Chapter 25.
+
+
+### Environments
+
+It’s important to mention them here because their behaviour is different from that of other objects: environments are always modified in place. This property is sometimes described as **reference semantics** because when you modify an environment all existing bindings to that environment continue to have the same reference.
+
+Take this environment, which we bind to `e1` and `e2`:
+
+```{r}
+e1 <- rlang::env(a = 1, b = 2, c = 3)
+e2 <- e1
+```
+
+![](pic/e-modify-1.png){fig-align="center" width=30%}
+
+If we change a binding, the environment is modified in place:
+
+```{r}
+e1$c <- 4
+e2$c
+```
+
+![](pic/e-modify-2.png){fig-align="center" width=30%}
+
+This basic idea can be used to create functions that “remember” their previous state. This property is also used to implement the R6 object-oriented programming system (Chapter 14).
+
+One consequence of this is that environments can contain themselves:
+
+```{r}
+e <- rlang::env()
+e$self <- e
+
+ref(e)
+```
+
+![](pic/e-self.png){fig-align="center" width=30%}
+
+This is a unique property of environments!
+
+
+### 2.5.3 Exercises
+
+1. Explain why the following code doesn’t create a circular list.
+
+```{r}
+x <- list()
+x[[1]] <- x
+```
+
+In this situation copy-on-modify prevents the creation of a circular list. Let us step through the details:
+
+```{r}
+x <- list()
+
+obj_addr(x)
+
+tracemem(x)
+
+x[[1]] <- x 
+
+obj_addr(x)      # copied object has new memory address
+
+obj_addr(x[[1]]) # list element contains old memory address
+```
+
+2. Wrap the two methods for subtracting medians into two functions, then use the ‘bench’ package to carefully compare their speeds. How does performance change as the number of columns increase?
+
+*ars*
+
+
+3. What happens if you attempt to use `tracemem()` on an environment?
+
+```{r}
+x <- new.env()
+# tracemem(x)
+
+#> Error in tracemem(x) : 
+#>   'tracemem' is not useful for promise and environment objects
+```
+
+
+## Unbinding and the garbage collector
+
+```{r}
+x <- 1:3
+```
+
+![](pic/unbinding-1.png){fig-align="center" width=30%}
+
+```{r}
+x <- 2:4
+```
+
+![](pic/unbinding-2.png){fig-align="center" width=30%}
+
+```{r}
+rm(x)
+```
+
+![](pic/unbinding-3.png){fig-align="center" width=30%}
+
+We created two objects, but by the time the code finishes, neither object is bound to a name. How do these objects get deleted? That’s the job of the **garbage collector**, or GC for short. The GC frees up memory by deleting R objects that are no longer used, and by requesting more memory from the operating system if needed.
+
+R uses a **tracing** GC. This means it traces every object that’s reachable from the global environment, and all objects that are, in turn, reachable from those objects (i.e. the references in lists and environments are searched recursively). The garbage collector does not use the modify-in-place reference count described above. While these two ideas are closely related, the internal data structures are optimised for different use cases.
+
+The garbage collector (GC) runs automatically whenever R needs more memory to create a new object. Looking from the outside, it’s basically impossible to predict when the GC will run. In fact, you shouldn’t even try. If you want to find out when the GC runs, call `gcinfo(TRUE)` and GC will print a message to the console every time it runs.
+
+You can force garbage collection by calling `gc()`. But despite what you might have read elsewhere, there’s never any need to call `gc()` yourself. The only reasons you might want to call `gc()` is to ask R to return memory to your operating system so other programs can use it, or for the side-effect that tells you how much memory is currently being used:
+
+```{r}
+gc()
+```

@@ -1,0 +1,136 @@
+---
+execute: 
+  freeze: auto
+
+format: pdf
+---
+
+<!-- These CSS codes are used for customising the appearance of the Gantt chart -->
+
+```{=html}
+<style>
+.grid .tick {
+	stroke: gray !important;
+	stroke-dasharray: 1 15 !important;
+	opacity: 0.6 !important;}
+
+.taskTextOutsideRight.taskTextOutside0 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideRight.taskTextOutside1 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideRight.taskTextOutside2 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideRight.taskTextOutside3 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideLeft.taskTextOutside0 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideLeft.taskTextOutside1 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideLeft.taskTextOutside2 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.taskTextOutsideLeft.taskTextOutside3 {
+  font-size: 13px !important;
+  font-family: Arial !important;}
+
+.sub-formula {
+  color: #618EBB;
+  cursor: pointer;}
+  
+</style>
+```
+
+
+:::{.column-screen}
+```{mermaid .grid.tick;.taskTextOutsideRight.taskTextOutside0;.taskTextOutsideLeft.taskTextOutside0;.taskTextOutsideRight.taskTextOutside1;.taskTextOutsideRight.taskTextOutside2;.taskTextOutsideRight.taskTextOutside3;.taskTextOutsideLeft.taskTextOutside1;.taskTextOutsideLeft.taskTextOutside2;.taskTextOutsideLeft.taskTextOutside3;}
+%%{
+  init: {
+  "theme": "default",
+  "gantt":{"topAxis":true},
+  "themeVariables": {
+    "fontFamily": "arial",
+    "sectionBkgColor": "white",
+    "altSectionBkgColor": "white",
+    "sectionBkgColor2": "#FFDFD3",
+    "taskBorderColor": "#F06E08",
+    "taskBkgColor": "#F06E08",
+    "critBorderColor": "#F06E08",
+    "critBkgColor": "#F06E08",
+    "doneTaskBorderColor": "#0E7FB0",
+    "doneTaskBkgColor": "#0E7FB0"}
+    }
+}%%
+
+gantt
+dateFormat  YYYY-MM-DD
+axisFormat %B
+todayMarker off
+
+section BEFU
+Preliminary economic forecasts finalised: befu_prelim_econ, 2023-02-07,1d
+Use `get_econ_fi()` to extract preliminary economic data: done, befu_prelim_get_econ_fi, 2023-02-08, 1d
+Preliminary tax forecasts finalised: befu_prelim_tax, 2023-02-14, 1d
+Confirm preliminary Matariki adjustments with Martin Keene & Riaan Labuschagne: done, befu_prelim_matariki, 2023-02-15, 1d
+Preliminary fiscal forecasts finalised: befu_prelim_fiscal, 2023-03-14, 1d
+Use `get_fiscal_fi()` to extract preliminary fiscal data & to record the confirmed Matariki adjustments: done, befu_prelim_get_fiscal_fi, 2023-03-15, 1d
+Use `get_oneoff_cab()` to extract preliminary structural one-offs data: done, befu_prelim_get_oneoff_cab, 2023-03-15, 1d
+Use `update_fi()` to update the preliminary Excel workbook: done, befu_prelim_update_fi, 2023-03-15, 1d
+
+Final economic forecasts finalised: befu_final_econ, 2023-03-23,1d
+Use `get_econ_fi()` to extract final economic data: done, befu_final_get_econ_fi, 2023-03-24, 1d
+Final tax forecasts finalised: befu_final_tax, 2023-03-30, 1d
+Confirm final Matariki adjustments with Martin Keene & Riaan Labuschagne: done, befu_final_matariki, 2023-03-31, 1d
+Final fiscal forecasts finalised: befu_final_fiscal, 2023-04-27, 1d
+Use `get_fiscal_fi()` to extract final fiscal data & to record the confirmed Matariki adjustments: done, befu_final_get_fiscal_fi, 2023-04-28, 1d
+Use `get_oneoff_cab()` to extract final structural one-offs data: done, befu_final_get_oneoff_cab, 2023-04-28, 1d
+Use `update_fi()` to update the final Excel workbook: done, befu_final_update_fi, 2023-04-28, 1d
+
+
+section PREFU<br>(Election years only)
+Economic forecast finalised: prefu_econ, 2023-08-01,1d
+Use `get_econ_fi()` to extract economic data: done, prefu_get_econ_fi, 2023-08-02, 1d
+Tax forecasts finalised: perfu_tax, 2023-08-08, 1d
+Confirm Matariki adjustments with Martin Keene & Riaan Labuschagne: done, prefu_matariki, 2023-08-09, 1d
+Fiscal forecasts finalised: prefu_fiscal, 2023-08-28, 1d
+Use `get_fiscal_fi()` to extract fiscal data & to record the confirmed Matariki adjustments: done, prefu_get_fiscal_fi, 2023-08-29, 1d
+Use `get_oneoff_cab()` to extract structural one-offs data: done, prefu_get_oneoff_cab, 2023-08-29, 1d
+Use `update_fi()` to update the Excel workbook: done, prefu_update_fi, 2023-08-29, 1d
+
+section Update for the new fiscal year 
+Year End Financial Statements published: crit, 2023-09-20, 1d
+Use `get_past_cab()` & `get_past_tfi()` to update historical fiscal data: done, get_past_fi, 2023-09-21, 1d
+
+
+section HYEFU
+Preliminary economic forecasts finalised: hyefu_prelim_econ, 2023-10-07,1d
+Use `get_econ_fi()` to extract preliminary economic data: done, hyefu_prelim_get_econ_fi, 2023-10-08, 1d
+Preliminary tax forecasts finalised: hyefu_prelim_tax, 2023-10-14, 1d
+Confirm preliminary Matariki adjustments with Martin Keene & Riaan Labuschagne: done, hyefu_prelim_matariki, 2023-10-15, 1d
+Preliminary fiscal forecasts finalised: hyefu_prelim_fiscal, 2023-11-03, 1d
+Use `get_fiscal_fi()` to extract preliminary fiscal data & to record the confirmed Matariki adjustments: done, hyefu_prelim_get_fiscal_fi, 2023-11-04, 1d
+Use `get_oneoff_cab()` to extract preliminary structural one-offs data: done, hyefu_prelim_get_oneoff_cab, 2023-11-04, 1d
+Use `update_fi()` to update the preliminary Excel workbook: done, hyefu_prelim_update_fi, 2023-11-04, 1d
+
+Final economic forecasts finalised: hyefu_final_econ, 2023-11-09,1d
+Use `get_econ_fi()` to extract final economic data: done, hyefu_final_get_econ_fi, 2023-11-10, 1d
+Final tax forecasts finalised: hyefu_final_tax, 2023-11-14, 1d
+Confirm final Matariki adjustments with Martin Keene & Riaan Labuschagne: done, hyefu_final_matariki, 2023-11-15, 1d
+Final fiscal forecasts finalised: hyefu_final_fiscal, 2023-11-25, 1d
+Use `get_fiscal_fi()` to extract final fiscal data & to record the confirmed Matariki adjustments: done, hyefu_final_get_fiscal_fi, 2023-11-26, 1d
+Use `get_oneoff_cab()` to extract final structural one-offs data: done, hyefu_final_get_oneoff_cab, 2023-11-26, 1d
+Use `update_fi()` to update the final Excel workbook: done, hyefu_final_update_fi, 2023-11-26, 1d
+```
+:::

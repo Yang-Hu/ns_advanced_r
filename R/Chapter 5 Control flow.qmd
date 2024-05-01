@@ -1,0 +1,484 @@
+---
+title: "Chapter 5 Control flow"
+author: "Yang Hu"
+format: 
+    html:
+      self-contained: true
+      embed-resources: true
+
+number-sections: false
+code-annotations: hover
+    
+toc: true
+toc-title: "Contents"
+toc-location: "left"
+toc-depth: 4
+
+execute: 
+  freeze: auto
+  warning: true
+---
+
+
+## Introduction
+
+There are two primary tools of control flow: choices and loops. 
+
+- Choices, like `if` statements and `switch()` calls, allow you to run different code depending on the input. 
+
+- Loops, like `for` and `while`, allow you to repeatedly run code, typically with changing options.
+
+
+
+## Quiz
+
+1. What is the difference between `if` and `ifelse()`?
+
+`if` works with scalars; `ifelse()` works with vectors.
+
+
+2. In the following code, what will the value of y be if x is TRUE? What if x is FALSE? What if x is NA?
+
+`y <- if (x) 3`
+
+When `x` is `TRUE`, y will be 3; when FALSE, y will be NULL; when NA the if statement will throw an error.
+
+3.What does switch("x", x = , y = 2, z = 3) return?
+
+
+## Choices 
+
+The basic form of an if statement in R is as follows:
+
+```{r}
+#| eval: false
+
+if (condition) true_action
+if (condition) true_action else false_action
+```
+
+If `condition` is `TRUE`, `true_action` is evaluated; if `condition` is `FALSE`, the optional `false_action` is evaluated.
+
+Typically the actions are compound statements contained within `{`:
+
+```{r}
+grade <- function(x) {
+  if (x > 90) {
+    "A"
+  } else if (x > 80) {
+    "B"
+  } else if (x > 50) {
+    "C"
+  } else {
+    "F"
+  }
+}
+```
+
+
+`if` returns a value so that you can assign the results:
+
+```{r}
+x1 <- if (TRUE) {1} else {2}
+
+x2 <- if (FALSE) {1} else {2}
+
+x1; x2
+```
+
+(I recommend assigning the results of an `if` statement only when the entire expression fits on one line; otherwise it tends to be hard to read.)
+
+When you use the single argument form without an else statement, `if` invisibly (Section 6.7.2) returns `NULL` if the condition is `FALSE`. Since functions like `c()` and `paste()` drop `NULL` inputs, this allows for a compact expression of certain idioms:
+
+```{r}
+greet <- function(name, birthday = FALSE) {
+  paste0(
+    "Hi ", name, 
+    if (birthday) {
+      " and HAPPY BIRTHDAY!"
+    }
+  )
+}
+
+greet("Yang")
+
+greet("Yang", birthday = TRUE)
+```
+
+
+### Invalid inputs
+
+The `condition` should evaluate to a single `TRUE` or `FALSE`. Most other inputs will generate an error:
+
+```{r}
+#| eval: false
+
+if ("x") {1}
+
+if (logical()) {1}
+
+if (NA) {1}
+```
+
+The exception is a logical vector of length greater than 1, which generates a warning:
+
+```{r}
+#| eval: false
+if (c(TRUE, FALSE)) {1}
+
+# Try:
+if (all(c(TRUE, FALSE))) {1}
+
+if (any(c(TRUE, FALSE))) {1}
+```
+
+
+### Vectorised if
+
+Given that if only works with a single `TRUE` or `FALSE`, you might wonder what to do if you have a vector of logical values. Handling vectors of values is the job of `ifelse()`: a vectorised function with `test`, `yes`, and `no` vectors (that will be recycled to the same length):
+
+```{r}
+x <- 1:10
+
+ifelse(x %% 5 == 0, yes = "wow!", no = as.character(x))
+
+ifelse(x %% x == 0, yes = "even", no = "odd")
+```
+
+Note that missing values will be propagated into the output.
+
+I recommend using `ifelse()` only when the `yes` and `no` vectors are the same type as it is otherwise hard to predict the output type. See https://vctrs.r-lib.org/articles/stability.html#ifelse for additional discussion.
+
+
+Another vectorised equivalent is the more general `dplyr::case_when()`. It uses a special syntax to allow any number of condition-vector pairs:
+
+```{r}
+x <- c(1:10, NA)
+
+dplyr::case_when(
+  x %% 35 == 0 ~ "fizz buzz",
+  x %% 5 == 0 ~ "fizz",
+  x %% 7 == 0 ~ "buzz",
+  is.na(x) ~ "???",
+  TRUE ~ as.character(x)
+)
+```
+
+
+## `switch()` statement
+
+Closely related to `if` is the `switch()` statement. It’s a compact, special purpose equivalent that lets you replace code like:
+
+```{r}
+
+your_name <- function(name) {
+  
+  if (name == "Yang") {
+    cat("You must be Yang!")
+  } else if (name == "Lara") {
+    cat("You must be Lara!")
+  } else {
+    cat("Sorry, I don't know you.")
+  }
+  
+}
+
+
+your_name_switch <- function(name) {
+
+  switch(name,
+         Yang = cat("You must be Yang!"),
+         Lara = cat("You must be Lara!"),
+         
+         # Equivalent to else {}
+         cat("Sorry, I don't know you."))}
+
+
+
+your_name("Yang"); your_name_switch("Yang")
+your_name("Eric"); your_name_switch("Eric")
+```
+
+The last component of a switch() should always throw an error, otherwise unmatched inputs will invisibly return `NULL`:
+
+```{r}
+(switch("c", a = 1, b = 2))    # Missing last component will always return `NULL`
+
+(switch("c", a = 1, b = 2, 3)) # Everything else will be 3
+```
+
+If multiple inputs have the same output, you can leave the right hand side of `=` empty and the input will “fall through” to the next value. This mimics the behaviour of C’s `switch` statement:
+
+```{r}
+legs <- function(animal) {
+  switch(animal,
+         
+         plant = 0,
+         
+         dog = ,       # the value will fall on the next one
+         
+         cat = ,
+         
+         horse = 4,
+         
+         human = ,     # the value will fall on the next one
+         
+         chicken = 2,
+
+         "Not in the list")}
+```
+
+
+It is also possible to use `switch()` with a numeric `x`, but is harder to read, and has undesirable failure modes if x is a not a whole number. **I recommend using `switch()` only with character inputs.**
+
+
+### 5.2.4 Exercises
+
+1. What type of vector does each of the following calls to `ifelse()` return?
+
+```{r}
+ifelse(TRUE, 1, "no")
+ifelse(FALSE, 1, "no")
+ifelse(NA, 1, "no")
+```
+
+The arguments of `ifelse()` are named `test`, `yes` and `no`. In general, `ifelse()` returns the entry for `yes` when `test` is `TRUE`, the entry for `no` when `test` is `FALSE` and `NA` when `test` is `NA`.
+
+
+2. Why does the following code work?
+
+```{r}
+x <- 1:10
+if (length(x)) "not empty" else "empty"
+```
+
+```{r}
+x <- numeric()
+
+if (length(x)) "not empty" else "empty"
+```
+
+`if()` expects a logical condition, but also accepts a numeric vector where `0` is treated as `FALSE` and **all other numbers are treated as `TRUE`**. Numerical missing values (including `NaN`) lead to an error in the same way that a logical missing, `NA`, does.
+
+
+
+## Loops
+
+`for` loops are used to iterate over items in a vector. They have the following basic form:
+
+```{r}
+#| eval: false
+
+for (item in vector) perform_action
+```
+
+For each item in `vector`, `perform_action` is called once; updating the value of `item` each time.
+
+```{r}
+
+for (i in 1:3) {
+  print(i)
+}
+
+# i can be replaeced by other letters or meaningful names:
+for (y in 1:3) {
+  print(y)
+}
+
+for (person in 1:3) {
+  print(person)
+}
+```
+
+(When iterating over a vector of indices, it’s conventional to use very short variable names like `i`, `j`, or `k`.)
+
+N.B.: for assigns the item to the current environment, overwriting any existing variable with the same name:
+
+```{r}
+i <- 100
+
+for (i in 1:5) {i}
+
+i
+```
+
+
+There are two ways to terminate a `for` loop early:
+
+`next` exits the current iteration.
+`break` exits the entire for loop.
+
+```{r}
+for (i in 1:10) {
+  if (i < 3) {
+    next
+  } else if (i > 5) {
+    break
+  } else {
+    print(i)
+  }
+}
+
+
+
+for (i in 1:10) {
+  if (i < 3) 
+    next
+
+  print(i)
+  
+  if (i >= 5)
+    break
+}
+```
+
+
+### 5.3.1 Common pitfalls
+
+There are three common pitfalls to watch out for when using for. First, if you’re generating data, make sure to preallocate the output container. Otherwise the loop will be very slow. The `vector()` function is helpful here.
+
+```{r}
+means <- c(1, 50, 20)
+
+out <- vector("list", length(means))
+
+for (i in 1:length(means)) {
+  out[[i]] <- rnorm(10, means[[i]])
+}
+```
+
+
+Next, beware of iterating over 1:length(x), which will fail in unhelpful ways if `x` has length 0:
+
+```{r}
+#| eval: false
+
+means <- c()
+
+out <- vector("list", length(means))
+
+for (i in 1:length(means)) {
+  out[[i]] <- rnorm(10, means[[i]])
+}
+
+```
+
+This occurs because `:` works with both increasing and decreasing sequences:
+
+```{r}
+1:length(means)
+```
+
+Use `seq_along(x)` instead. It always returns a value the same length as `x`:
+
+```{r}
+seq_along(means)
+
+out <- vector("list", length(means))
+
+for (i in seq_along(means)) {
+  out[[i]] <- rnorm(10, means[[i]])
+}
+
+```
+
+
+Finally, you might encounter problems when iterating over S3 vectors, as loops typically strip the attributes:
+
+```{r}
+xs <- as.Date(c("1991-10-30", "1991-03-02", "2020-09-14"))
+
+for (x in xs) {
+  print(x)
+}
+
+
+# My approach:
+for (i in xs) {
+  print(as.Date(i))
+}
+
+
+# Book's approach:
+for (i in seq_along(xs)) {
+  print(xs[[i]])
+}
+```
+
+
+### Related tools
+
+`for` loops are useful if you know in advance the set of values that you want to iterate over. If you don’t know, there are two related tools with more flexible specifications:
+
+- `while(condition) action`: performs `action` while `condition` is `TRUE`.
+
+- `repeat(action)`: repeats `action` forever (i.e. until it encounters `break`).
+
+
+R does not have an equivalent to the `do {action} while (condition)` syntax found in other languages.
+
+You can rewrite any `for` loop to use `while` instead, and you can rewrite any `while` loop to use `repeat`, but the converses are not true. That means `while` is more flexible than `for`, and `repeat` is more flexible than `while`. 
+
+It’s good practice, however, to use the least-flexible solution to a problem, so you should use `for` wherever possible.
+
+Generally speaking you shouldn’t need to use `for` loops for data analysis tasks, as `map()` and `apply()` already provide less flexible solutions to most problems. 
+
+
+### 5.3.3 Exercises
+
+1. Why does this code succeed without errors or warnings?
+
+```{r}
+x <- numeric()
+
+out <- vector("list", length(x))
+
+for (i in 1:length(x)) {
+  
+  out[i] <- x[i] ^ 2
+}
+
+out
+```
+
+This loop is a delicate issue, and we have to consider a few points to explain why it is evaluated without raising any errors or warnings.
+
+The beginning of this code smell is the statement `1:length(x)` which creates the index of the for loop. As `x` has length 0 `1:length(x)` counts down from 1 to 0. This issue is typically avoided via usage of `seq_along(x)` or similar helpers which would just generate `integer(0)` in this case.
+
+As we use `[<-` and `[` for indexing 0-length vectors at their first and zeroth position, we need to be aware of their subsetting behaviour for out-of-bounds and zero indices.
+
+During the first iteration `x[1]` will generate an `NA` (out-of-bounds indexing for atomics). The resulting `NA` (from squaring) will be assigned to the empty length-1 list `out[1]` (out-of-bounds indexing for lists).
+
+In the next iteration, `x[0]` will return `numeric(0)` (zero indexing for atomics). Again, squaring doesn’t change the value and `numeric(0)` is assigned to `out[0]` (zero indexing for lists). Assigning a 0-length vector to a 0-length subset works but doesn’t change the object.
+
+Overall, the code works, because each step includes valid R operations (even though the result may not be what the user intended).
+
+
+2. When the following code is evaluated, what can you say about the vector being iterated?
+
+```{r}
+xs <- c(1, 2, 3)
+
+for (x in xs) {
+  xs <- c(xs, x * 2)
+}
+
+xs
+```
+
+In this loop x takes on the values of the initial `xs (1, 2 and 3)`, indicating that it is evaluated just once in the beginning of the loop, not after each iteration. (Otherwise, we would run into an infinite loop.)
+
+
+3. What does the following code tell you about when the index is updated?
+
+```{r}
+for (i in 1:3) {
+  i <- i * 2
+  print(i) 
+}
+#> [1] 2
+#> [1] 4
+#> [1] 6
+```
+
+In a for loop the index is updated in the beginning of each iteration. Therefore, reassigning the index symbol during one iteration doesn’t affect the following iterations. (Again, we would otherwise run into an infinite loop.)

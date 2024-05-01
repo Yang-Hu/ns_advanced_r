@@ -1,0 +1,667 @@
+---
+title: "Chapter 10 Function factories"
+author: "Yang Hu"
+format: 
+    html:
+      self-contained: true
+      embed-resources: true
+
+number-sections: false
+code-annotations: hover
+    
+toc: true
+toc-title: "Contents"
+toc-location: "left"
+toc-depth: 4
+
+execute: 
+  freeze: auto
+  warning: true
+---
+
+
+## Introduction
+
+A **function factory** is a function that makes functions. Here’s a very simple example: we use a function factory (`power1()`) to make two child functions (`square()` and `cube()`):
+
+```{r}
+power1 <- function(exp) {
+  function(x) {
+    x ^ exp
+  }
+}
+
+square <- power1(2)
+
+cube <- power1(3)
+```
+
+Don’t worry if this doesn’t make sense yet, it should by the end of the chapter!
+
+I’ll call `square()` and `cube()` **manufactured functions**, but this is just a term to ease communication with other humans: from R’s perspective they are no different to functions created any other way.
+
+```{r}
+square(2)
+
+cube(2)
+```
+
+You have already learned about the individual components that make function factories possible:
+
+- In Section 6.2.3, you learned about R’s first-class functions. In R, you bind a function to a name in the same way as you bind any object to a name: with `<-`.
+
+- In Section 7.4.2, you learned that **a function captures (encloses) the environment in which it is created**.
+
+- In Section 7.4.4, you learned that **a function creates a new execution environment every time it is run. This environment is usually ephemeral, but here it becomes the enclosing environment of the manufactured function**.
+
+In this chapter, you’ll learn how the non-obvious combination of these three features leads to the function factory. You’ll also see examples of their usage in visualisation and statistics.
+
+Of the three main functional programming tools (functionals, function factories, and function operators), function factories are the least used. Generally, they don’t tend to reduce overall code complexity but instead partition complexity into more easily digested chunks. Function factories are also an important building block for the very useful function operators, which you’ll learn about in Chapter 11.
+
+
+
+### Prerequisites
+
+Make sure you’re familiar with the contents of Sections 6.2.3 (first-class functions), 7.4.2 (the function environment), and 7.4.4 (execution environments) mentioned above.
+
+Function factories only need base R. We’ll use a little rlang to peek inside of them more easily, and we’ll use ggplot2 and scales to explore the use of function factories in visualisation.
+
+```{r}
+library(rlang)
+library(ggplot2)
+library(scales)
+```
+
+
+## Factory fundamentals
+
+The key idea that makes function factories work can be expressed very concisely:
+
+> The enclosing environment of the manufactured function is an execution environment of the function factory.
+
+It only takes few words to express these big ideas, but it takes a lot more work to really understand what this means. This section will help you put the pieces together with interactive exploration and some diagrams.
+
+
+### Enviroments
+
+Let’s start by taking a look at `square()` and `cube()`:
+
+```{r}
+square
+```
+
+```{r}
+cube
+```
+
+It’s obvious where `x` comes from, but how does R find the value associated with `exp`? 
+
+```{r}
+cube(2)
+
+cube
+```
+
+Simply printing the manufactured functions is not revealing because the bodies are identical; the contents of the enclosing environment are the important factors. We can get a little more insight by using `rlang::env_print()`. That shows us that we have two different environments (each of which was originally an execution environment of `power1()`). The environments have the same parent, which is the enclosing environment of `power1()`, the global environment.
+
+```{r}
+env_print(square)
+
+env_print(cube)
+```
+
+```{r}
+fn_env(square)$exp
+
+fn_env(cube)$exp
+```
+
+This is what makes manufactured functions behave differently from one another: names in the enclosing environment are bound to different values.
+
+
+### Diagram conventions
+
+We can also show these relationships in a diagram:
+
+![](pic/power-full.png){fig-align=center width=65%}
+
+
+There’s a lot going on this diagram and some of the details aren’t that important. We can simplify considerably by using two conventions:
+
+- Any free floating symbol lives in the global environment.
+
+- Any environment without an explicit parent inherits from the global environment.
+
+![](pic/power-simple.png){fig-align=center width=65%}
+
+
+This view, which focuses on the environments, doesn’t show any direct link between `cube()` and `square()`. That’s because the link is the through the body of the function, which is identical for both, but is not shown in this diagram.
+
+
+To finish up, let’s look at the execution environment of `square(10)`. **When `square()` executes `x ^ exp` it finds `x` in the execution environment and exp in its enclosing environment.**
+
+```{r}
+cube(2)
+
+cube
+
+fn_env(cube)$exp
+```
+
+### Forcing evaluation
+
+There’s a subtle bug in `power1()` caused by lazy evaluation. To see the problem we need to introduce some indirection:
+
+```{r}
+x <- 2
+
+square <- power1(x)
+
+x <- 3
+```
+
+What should square(2) return? You would hope it returns 4:
+
+```{r}
+square(2)
+
+2 ^ 3
+```
+
+
+**Unfortunately it doesn’t because `x` is only evaluated lazily when `square()` is run, not when` power1()` is run. **
+
+
+In general, this problem will arise whenever a binding changes in between calling the factory function and calling the manufactured function. This is likely to only happen rarely, but when it does, it will lead to a real head-scratcher of a bug.
+
+We can fix this problem by **forcing** evaluation with `force()`:
+
+```{r}
+power2 <- function(exp) {
+  force(exp)
+  function(x) {
+    x ^ exp
+  }
+}
+
+x <- 2
+
+square <- power2(x)
+
+x <- 3
+
+square(2)
+```
+
+Whenever you create a function factory, make sure every argument is evaluated, using `force()` as necessary if the argument is only used by the manufactured function.
+
+
+
+
+### Stateful functions
+
+Function factories also allow you to maintain state across function invocations, which is generally hard to do because of the **fresh start principle** described in Section 6.4.3.
+
+There are two things that make this possible:
+
+- The enclosing environment of the manufactured function is unique and constant.
+
+- R has a special assignment operator, `<<-`, which modifies bindings in the enclosing environment.
+
+
+The usual assignment operator, <-, always creates a binding in the current environment. The super assignment operator, <<- rebinds an existing name found in a parent environment.
+
+The following example shows how we can combine these ideas to create a function that records how many times it has been called:
+
+
+```{r}
+new_counter <- function() {
+  i <- 0
+  
+  function() {
+    i <<- i + 1
+    i
+  }
+}
+
+counter_one <- new_counter()
+
+counter_two <- new_counter()
+```
+
+![](pic/counter-1.png){fig-align=center width=65%}
+
+When the manufactured function is run `i <<- i + 1` will modify `i` in its enclosing environment. Because **manufactured functions have independent enclosing environments, they have independent counts**:
+
+```{r}
+counter_one()
+
+counter_one()
+
+counter_one()
+
+counter_two()
+
+counter_one()
+
+counter_one()
+
+counter_one()
+
+counter_two()
+```
+
+![](pic/counter-2.png){fig-align=center width=65%}
+
+
+### Garbage collection
+
+**With most functions, you can rely on the garbage collector to clean up any large temporary objects created inside a function. However, manufactured functions hold on to the execution environment**, so you’ll need to explicitly unbind any large temporary objects with rm(). Compare the sizes of g1() and g2() in the example below:
+
+```{r}
+f1 <- function(n){
+  x <- runif(n)
+  m <- mean(x)
+  
+  function() m
+}
+
+g1 <- f1(1e4)
+
+lobstr::obj_size(g1)
+
+
+f2 <- function(n){
+  x <- runif(n)
+  m <- mean(x)
+  
+  rm(x)
+  
+  function() m
+}
+
+g2 <- f2(1e4)
+
+lobstr::obj_size(g2)
+```
+
+
+### 10.2.6 Exercises 
+
+**What happens if you don’t use a closure? Make predictions, then verify with the code below.**
+
+```{r}
+i <- 0
+
+new_counter2 <- function() {
+  i <<- i + 1
+  i
+}
+
+i <- 100
+
+new_counter2()
+```
+
+Without the captured and encapsulated environment of a closure **the counts will be stored in the global environment. Here they can be overwritten or deleted as well as interfere with other counters**. !!!
+
+
+What happens if you use `<-` instead of `<<-`? Make predictions, then verify with the code below.
+
+```{r}
+new_counter3 <- function() {
+  i <- 0
+  function() {
+    i <- i + 1
+    i
+  }
+}
+
+new_counter_3 <- new_counter3()
+
+new_counter_3()
+new_counter_3()
+new_counter_3()
+```
+
+
+##  Graphical factories
+
+We’ll begin our exploration of useful function factories with a few examples from ggplot2.
+
+
+### Labelling
+
+One of the goals of the *scales* package is to make it easy to customise the labels on ggplot2. It provides many functions to control the fine details of axes and legends.
+
+The formatter functions are a useful class of functions which make it easier to control the appearance of axis breaks. The design of these functions might initially seem a little odd: they all return a function, which you have to call in order to format a number.
+
+```{r}
+y <- c(12345, 123456, 1234567)
+
+# comma_format() returns a formatting function.
+# comma_format()() applies that formatting function to the vector y.
+
+comma_format()(y)
+
+number_format(scale = 1e-3, big.mark = ",", suffix = " K")(y)
+```
+
+In other words, the primary interface is a function factory. At first glance, this seems to add extra complexity for little gain. But it enables a nice interaction with ggplot2’s scales, because they accept functions in the label argument:
+
+```{r}
+df <- data.frame(x = 1, y = y)
+
+core <- ggplot(df, aes(x = x, y = y)) +
+  geom_point() +
+  scale_x_continuous(breaks = 1, labels = NULL) +
+  labs(x = NULL, y = NULL)
+
+core
+
+core + scale_y_continuous(labels = comma_format())
+
+core + scale_y_continuous(labels = number_format(scale = 1e-3, big.mark = ",", suffix = " K"))
+
+core + scale_y_continuous(labels = scientific_format())
+```
+
+
+### Histogram bins
+
+A little known feature of `geom_histogram()` is that **the `binwidth` argument can be a function**. This is particularly useful because the function is executed once for each group, which means you can have different binwidths in different facets, which is otherwise not possible.
+
+
+To illustrate this idea, and see where variable binwidth might be useful, I’m going to construct an example where a fixed binwidth isn’t great.
+
+
+```{r}
+# construct some sample data with very different numbers in each cell
+sd <- c(1, 5, 15)
+n <- 100
+
+df <- data.frame(x = rnorm(3 * n, sd = sd), sd = rep(sd, n))
+
+ggplot(df, aes(x)) + 
+  geom_histogram(binwidth = 2) + 
+  facet_wrap(~ sd, scales = "free_x") + 
+  labs(x = NULL)
+```
+
+
+Here each facet has the same number of observations, but the variability is very different. It would be nice if we could request that the binwidths vary so we get approximately the same number of observations in each bin. 
+
+One way to do that is with a function factory that inputs the desired number of bins (`n`), and outputs a function that takes a numeric vector and returns a binwidth:
+
+```{r}
+binwidth_bins <- function(n) {
+  force(n) # this is important 
+  
+  function(x) {
+    (max(x) - min(x)) / n 
+  } 
+}
+
+
+ggplot(df, aes(x)) +
+  geom_histogram(binwidth = binwidth_bins(20)) +
+  facet_wrap(~ sd, scales = "free_x") +
+  labs(x = NULL)
+```
+
+
+We could use this same pattern to wrap around the base R functions that automatically find the so-called optimal binwidth, `nclass.Sturges()`, `nclass.scott()`, and `nclass.FD()`:
+
+```{r}
+base_bins <- function(type) {
+  fun <- switch(type,
+    Sturges = nclass.Sturges,
+    scott = nclass.scott,
+    FD = nclass.FD,
+    stop("Unknown type", call. = FALSE)
+  )
+  
+  function(x) {
+    (max(x) - min(x)) / fun(x)
+  }
+}
+
+ggplot(df, aes(x)) + 
+  geom_histogram(binwidth = base_bins("FD")) + 
+  facet_wrap(~ sd, scales = "free_x") + 
+  labs(x = NULL)
+```
+
+
+### `ggsave()`
+
+Finally, I want to show a function factory used internally by ggplot2. ggplot2:::plot_dev() is used by ggsave() to go from a file extension (e.g. png, jpeg etc) to a graphics device function (e.g. png(), jpeg()). The challenge here arises because the base graphics devices have some minor inconsistencies which we need to paper over:
+
+- Most have `filename` as first argument but some have `file`.
+
+- The `width` and `height` of raster graphic devices use pixels units by default, but the vector graphics use inches.
+
+A mildly simplified version of `plot_dev()` is shown below:
+
+```{r}
+#| eval: false
+
+plot_dev <- function(ext, dpi = 96) {
+  force(dpi)
+  
+  switch(ext,
+    eps =  ,
+    ps  =  function(path, ...) {
+      grDevices::postscript(
+        file = filename, ..., onefile = FALSE, 
+        horizontal = FALSE, paper = "special"
+      )
+    },
+    pdf = function(filename, ...) grDevices::pdf(file = filename, ...),
+    svg = function(filename, ...) svglite::svglite(file = filename, ...),
+    emf = ,
+    wmf = function(...) grDevices::win.metafile(...),
+    png = function(...) grDevices::png(..., res = dpi, units = "in"),
+    jpg = ,
+    jpeg = function(...) grDevices::jpeg(..., res = dpi, units = "in"),
+    bmp = function(...) grDevices::bmp(..., res = dpi, units = "in"),
+    tiff = function(...) grDevices::tiff(..., res = dpi, units = "in"),
+    stop("Unknown graphics extension: ", ext, call. = FALSE)
+  )
+}
+
+plot_dev("pdf")
+#> function(filename, ...) grDevices::pdf(file = filename, ...)
+#> <bytecode: 0x7fe857744590>
+#> <environment: 0x7fe8575f6638>
+
+plot_dev("png")
+#> function(...) grDevices::png(..., res = dpi, units = "in")
+#> <bytecode: 0x7fe85947f938>
+#> <environment: 0x7fe859169548>
+```
+
+
+### Statistical factories
+
+More motivating examples for function factories come from statistics:
+
+- The Box-Cox transformation.
+- Bootstrap resampling.
+- Maximum likelihood estimation.
+
+All of these examples can be tackled without function factories, but I think function factories are a good fit for these problems and provide elegant solutions. These examples expect some statistical background, so feel free to skip if they don’t make much sense to you.
+
+
+### Box-Cox transformation
+
+The Box-Cox transformation (a type of power transformation) is a flexible transformation often used to transform data towards normality. It has a single parameter, λ, which controls the strength of the transformation. We could express the transformation as a simple two argument function:
+
+```{r}
+boxcox1 <- function(x, lambda) {
+  stopifnot(length(lambda) == 1)
+  
+  if (lambda == 0) {
+    log(x)
+  } else {
+    (x ^ lambda - 1) / lambda
+  }
+  
+}
+```
+
+But re-formulating as a function factory makes it easy to explore its behaviour with `stat_function()`:
+
+```{r}
+boxcox2 <- function(lambda) {
+  if (lambda == 0) {
+    function(x) log(x)
+  } else {
+    function(x) (x ^ lambda - 1) / lambda
+  }
+}
+
+stat_boxcox <- function(lambda) {
+  stat_function(aes(colour = lambda), fun = boxcox2(lambda), size = 1)
+}
+
+ggplot(data.frame(x = c(0, 5)), aes(x)) + 
+  lapply(c(0.5, 1, 1.5), stat_boxcox) + 
+  scale_colour_viridis_c(limits = c(0, 1.5))
+
+# visually, log() does seem to make sense as the transformation
+# for lambda = 0; as values get smaller and smaller, the function
+# gets close and closer to a log transformation
+ggplot(data.frame(x = c(0.01, 1)), aes(x)) + 
+  lapply(c(0.5, 0.25, 0.1, 0), stat_boxcox) +    # Try `map` instead of `lapply`
+  scale_colour_viridis_c(limits = c(0, 1.5))
+```
+
+In general, this allows you to use a Box-Cox transformation with any function that accepts a unary transformation function: you don’t have to worry about that function providing `...` to pass along additional arguments. I also think that the partitioning of `lambda` and `x` into two different function arguments is natural since `lambda` plays quite a different role than `x`.
+
+
+### Bootstrap generators
+
+Function factories are a useful approach for bootstrapping. Instead of thinking about a single bootstrap (you always need more than one!), you can think about a bootstrap **generator**, a function that yields a fresh bootstrap every time it is called:
+
+```{r}
+boot_permute <- function(df, var) {
+  n <- nrow(df)
+  
+  force(var)
+  
+  function() {
+    col <- df[[var]]
+    col[sample(n, replace = TRUE)]
+  }
+}
+
+boot_mtcars1 <- boot_permute(mtcars, "mpg")
+
+boot_mtcars1()
+
+
+# or? 
+sample(x = mtcars$mpg, size = nrow(mtcars), replace = TRUE)
+``` 
+
+The advantage of a function factory is more clear with a parametric bootstrap where we have to first fit a model. We can do this setup step once, when the factory is called, rather than once every time we generate the bootstrap:
+
+```{r}
+boot_model <- function(df, formula) {
+  mod <- lm(formula, data = df)
+  fitted <- unname(fitted(mod))
+  resid <- unname(resid(mod))
+  rm(mod)
+
+  function() {
+    fitted + sample(resid)
+  }
+}
+
+boot_mtcars2 <- boot_model(mtcars, mpg ~ wt)
+
+boot_mtcars2()
+```
+
+I use `rm(mod)` because linear model objects are quite large (they include complete copies of the model matrix and input data) and I want to keep the manufactured function as small as possible.
+
+
+
+### Maximum likelihood estimation 
+
+The goal of maximum likelihood estimation (MLE) is to find the parameter values for a distribution that make the observed data most likely. To do MLE, you start with a probability function.
+
+
+Skip the rest for now.
+
+
+
+
+## **Function factories + functionals**
+
+To finish off the chapter, I’ll show how you might combine functionals and function factories to turn data into many functions. The following code creates many specially named power functions by iterating over a list of arguments:
+
+```{r}
+names <- list(
+  square = 2, 
+  cube = 3, 
+  root = 1/2, 
+  cuberoot = 1/3, 
+  reciprocal = -1
+)
+
+power1 <- function(exp) {
+  function(x) {
+    x ^ exp
+  }
+}
+
+funs <- purrr::map(names, power1)
+
+funs$root(64)
+
+funs$reciprocal(4)
+
+```
+
+
+One downside of the current construction is that you have to prefix every function call with `funs$`. There are three ways to eliminate this additional syntax:
+
+- For a very temporary effect, you can use `with()`:
+
+```{r}
+with(funs, root(10))
+```
+
+I recommend this because it makes it very clear when code is being executed in a special context and what that context is.
+
+- For a longer effect, you can `attach()` the functions to the search path, then `detach()` when you’re done:
+
+```{r}
+attach(funs)
+#> The following objects are masked _by_ .GlobalEnv:
+#> 
+#>     cube, square
+root(100)
+#> [1] 10
+detach(funs)
+```
+
+You’ve probably been told to avoid using `attach()`, and that’s generally good advice. However, the situation is a little different to the usual because we’re attaching a list of functions, not a data frame. It’s less likely that you’ll modify a function than a column in a data frame, so the some of the worst problems with `attach()` don’t apply.
+
+- Finally, you could copy the functions to the global environment with `env_bind()` (you’ll learn about `!!!` in Section 19.6). This is mostly permanent:
+
+```{r}
+rlang::env_bind(globalenv(), !!!funs)
+
+root(100)
+```
+
+You can later unbind those same names, but there’s no guarantee that they haven’t been rebound in the meantime, and you might be deleting an object that someone else created.
+
+```{r}
+rlang::env_unbind(globalenv(), names(funs))
+```
+
+You’ll learn an alternative approach to the same problem in Section 19.7.4. Instead of using a function factory, you could construct the function with quasiquotation. This requires additional knowledge, but generates functions with readable bodies, and avoids accidentally capturing large objects in the enclosing scope. We use that idea in Section 21.2.4 when we work on tools for generating HTML from R.
