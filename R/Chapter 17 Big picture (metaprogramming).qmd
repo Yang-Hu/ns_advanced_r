@@ -81,6 +81,33 @@ expr(updatefi::get_econ_fi())
 expr(mean(x, na,rm = TRUE))
 
 expr(10 + 100 + 1000) |> typeof()
+
+# Try
+map(1:5, \(.x) {.x + .x})                        # Calculate as they are
+
+map(1:5, \(.x) {expr(.x + .x)})                  # Shown as `.x + .x`, not calculated
+
+map(1:5, \(.x) {expr(!!.x + .x)})                # Shown as `1 + .x`, not calculated
+
+map(1:5, \(.x) {expr(!!.x + !!.x)})              # Shown as `1 + 1`, not calculated
+
+map(1:5, \(.x) {expr(!!.x + !!.x) |> eval()})    # Shown as `1 + 1`, calculated
+
+
+# Based on these, modify the arguments based on conditions:
+
+map_dbl(1:5, \(.x) {
+  
+  if (.x %% 2 == 1) {   # If .x is an odd number
+    
+    .x <- .x + 1
+    
+    expr(!!.x + !!.x) |> eval()
+    
+  }
+  
+  expr(!!.x + !!.x) |> eval()})    # Shown as `1 + 1`, calculated
+
 ```
 
 More formally, captured code is called an expression. An expression isn’t a single type of object, but is a collective term for any of four types (call, symbol, constant, or pairlist), which you’ll learn more about in Chapter 18.
@@ -99,6 +126,9 @@ Here you need to use a function specifically designed to capture user input in a
 capture_it <- function(x) {enexpr(x)}
 
 capture_it(1 + 2 + 3)
+
+# enexpr() is designed to capture expressions in a way that reflects their evaluation in the context of a function call. 
+# It looks at the internal promise object that powers lazy evaluation in R, allowing it to capture the actual expressions passed to a function, even if those expressions involve variables whose values are determined later. This makes enexpr() particularly useful in function definitions where you want to work with the expressions passed as arguments, rather than their evaluated results.
 ```
 
 Because `capture_it()` uses `enexpr()` we say that it automatically quotes its first argument. You’ll learn more about this term in Section 19.2.1.
@@ -127,6 +157,23 @@ eval(f)
 f$x <- c(1, 2, 3)
 
 eval(f)
+
+
+# new:
+(f <- expr(list(x = 1, y = 2)))
+
+
+# Add a new argument:
+f$z <- 3
+
+f
+
+# or remove an argument:
+
+f$y <- NULL
+
+f
+
 ```
 
 The first element of the call is the function to be called, which means the first argument is in the second position. You’ll learn the full details in Section 18.3.
@@ -193,7 +240,6 @@ Displaying the AST in this way is a useful tool for exploring R’s grammar, the
 
 ## Code can generate code (!)
 
-
 As well as seeing the tree from code typed by a human, you can also use code to create new trees. There are two main `tools: call2()` and unquoting.
 
 
@@ -203,6 +249,10 @@ As well as seeing the tree from code typed by a human, you can also use code to 
 call2("f", 1, 2, 3)
 
 call2("+", 1, call2("*", 2, 3))
+
+# new: 
+
+call2("mean", call2("c", 1, 2, 3))
 ```
 
 `call2()` is often convenient to program with, but is a bit clunky for interactive use. An alternative technique is to build complex code trees by combining simpler code trees with a template. `expr()` and `enexpr()` have built-in support for this idea via `!!` (pronounced bang-bang), the **unquote operator**. 反引用操作符
@@ -216,6 +266,17 @@ yy <- expr(y + y)
 
 expr(!!xx / !!yy)
 
+
+# new attempt for a simple map function:
+
+fn <- expr(\(.x) {.x + .x})   # Inner function of map()
+
+expr(map_dbl(1:3, !!fn))      # Assemble it with the main map() function
+
+# or call2("map_dbl", 1:3, fn)
+
+# Test:
+expr(map_dbl(1:3, !!fn)) |> eval()
 ```
 
 Notice that the output preserves the operator precedence so we get `(x + x) / (y + y)` not `x + x / y + y` (i.e. `x + (x / y) + y`). This is important, particularly if you’ve been wondering if it wouldn’t be easier to just paste strings together.
