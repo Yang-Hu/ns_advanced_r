@@ -275,9 +275,10 @@ expr(map_dbl(1:3, !!fn))      # Assemble it with the main map() function
 
 # or call2("map_dbl", 1:3, fn)
 
-# Test:
-expr(map_dbl(1:3, !!fn)) |> eval()
+# Test: are you ok after all these chaos?
+expr(map_dbl(1:3, !!fn)) |> eval() 
 ```
+
 
 Notice that the output preserves the operator precedence so we get `(x + x) / (y + y)` not `x + x / y + y` (i.e. `x + (x / y) + y`). This is important, particularly if you’ve been wondering if it wouldn’t be easier to just paste strings together.
 
