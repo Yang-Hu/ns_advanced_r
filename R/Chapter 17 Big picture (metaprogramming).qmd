@@ -275,7 +275,7 @@ expr(map_dbl(1:3, !!fn))      # Assemble it with the main map() function
 
 # or call2("map_dbl", 1:3, fn)
 
-# Test: are you ok?
+# Test: are you ok after all these chaos?
 expr(map_dbl(1:3, !!fn)) |> eval() 
 ```
 
