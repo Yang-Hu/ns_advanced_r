@@ -401,14 +401,14 @@ eval(expr = expr(x + y), env(x = iris[ , "Sepal.Length"], y = 1))
 ```
 
 
-
-
 ## Customising evaluation with functions
 
 The above example used an environment that bound `x` and `y` to vectors. It’s less obvious that **you also bind names to functions, allowing you to override the behaviour of existing functions. This is a big idea** that we’ll come back to in Chapter 21 where I explore generating HTML and LaTeX from R. The example below gives you a taste of the power. Here I evaluate code in a special environment where `*` and `+` have been overridden to work with strings instead of numbers:
 
 ```{r}
 string_math <- function(x) {
+  
+  # Define the environment:
   e <- env(
     caller_env(),
     
@@ -417,7 +417,8 @@ string_math <- function(x) {
     `-` = function(x, y) {x + y}          # This is a trick (use + instead of -) !
   )
   
-  eval(enexpr(x), e)
+  # Evaluate the captured expression `x`, using the defined environment rather than the global environment
+  eval(enexpr(x), envir = e)
 }
 
 name <- "Yang"
@@ -466,6 +467,17 @@ df <- data.frame(x = 1:5, y = 5:1)
 df
 
 eval_tidy(expr = expr(x + y), data = df)
+
+
+# My example:
+iris$Sepal.Width + iris$Sepal.Length
+
+# vs:
+eval_tidy(expr = expr(Sepal.Width + Sepal.Length), data = iris)
+
+# or?
+with(data = iris, expr = Sepal.Width + Sepal.Length)
+
 ```
 
 Evaluating with a data mask is a useful technique for interactive analysis because it allows you to write `x + y` rather than `df$x + df$y`. However, that convenience comes at a cost: ambiguity. In Section 20.4 you’ll learn how to deal with ambiguity using special `.data` and `.env` pronouns.
@@ -477,8 +489,8 @@ Unfortunately, this function has a subtle bug and we need a new data structure t
 
 To make the problem more obvious, I’m going to modify `with2()`. The basic problem still occurs without this modification but it’s much harder to see.
 
-
 ```{r}
+
 with2 <- function(df, expr) {
   a <- 1000
   
