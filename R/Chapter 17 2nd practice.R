@@ -267,13 +267,46 @@ DBI::dbDisconnect(con)
 
 
 
+# 17.7Customising evaluation with data
+
+df <- data.frame(x = 1:5, y = sample(5))
+
+eval_tidy(expr(x + y), df)
 
 
 
+with2 <- function(df, expr) {
+
+  eval_tidy(enexpr(expr), df)
+
+}
 
 
+with2(df, x + y)
 
 
+with2 <- function(df, expr) {
+
+  a <- 1e3
+
+  eval_tidy(enexpr(expr), df)
+
+}
+
+
+with2(df, x + a)
+
+with2 <- function(df, expr) {
+
+  a <- 1e3
+
+  eval_tidy(enquo(expr), df)
+
+}
+
+a <- 10
+
+with2(df, x + a)
 
 
 

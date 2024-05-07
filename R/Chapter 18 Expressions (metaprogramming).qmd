@@ -52,7 +52,6 @@ eval(z)
 The focus of this chapter is the data structures that underlie expressions. Mastering this knowledge will allow you to inspect and modify captured code, and to generate code with code. We’ll come back to `expr()` in Chapter 19, and to `eval()` in Chapter 20.
 
 
-
 ```{r}
 library(rlang)
 library(lobstr)
@@ -70,7 +69,11 @@ We’ll start by introducing some conventions for drawing ASTs, beginning with a
 
 - By "hand" (i.e. with OmniGraffle):
 
-![](pic/simple.png){fig-align=center width=65%}
+![](../pic/simple.png){fig-align=center width=65%}
+
+<!-- Note how to find the picture if the .qmd file is in a sub folder -->
+
+
 
 - With `lobstr::ast()`:
 
@@ -83,7 +86,7 @@ lobstr::ast(f(x, "y", 1))
 
 Both approaches share conventions as much as possible:
 
-- The leaves of the tree are either symbols, like `f` and `x`, or constants, like `1` or `"y"`. Symbols are drawn in purple and have rounded corners. Constants have black borders and square corners. Strings and symbols are easily confused, so strings are always surrounded in quotes.
+- The leaves of the tree are either **symbols**, like `f` and `x`, or **constants**, like `1` or `"y"`. Symbols are drawn in purple and have rounded corners. Constants have black borders and square corners. Strings and symbols are easily confused, so strings are always surrounded in quotes.
 
 - The branches of the tree are call objects, which represent function calls, and are drawn as orange rectangles. The first child (`f`) is the function that gets called; the second and subsequent children (`x`, `"y"`, and `1`) are the arguments to that function.
 
@@ -112,7 +115,7 @@ ast(
   )
 ```
 
-There’s only one place where whitespace affects the AST:
+There’s only one place where white space affects the AST:
 
 ```{r}
 lobstr::ast(y -> x)
@@ -143,9 +146,10 @@ There really is no difference between the ASTs, and if you generate an expressio
 
 ```{r}
 expr(`<-`(y, `*`(x, 10)))  # !!!
+
 ```
 
-The order in which infix operators are applied is governed by a set of rules called operator precedence, and we’ll use `lobstr::ast()` to explore them in Section 18.4.1.
+The order in which infix operators are applied is governed by a set of rules called operator precedence (运算符优先级), and we’ll use `lobstr::ast()` to explore them in Section 18.4.1.
 
 
 ### 18.2.4 Exercises
@@ -226,6 +230,7 @@ purrr::map(for_test, \(.x){
 })
 ```
 
+
 ### Symbols
 
 A **symbol** represents the name of an object like `x`, `mtcars`, or `mean`. In base R, the terms symbol and name are used interchangeably (i.e. `is.name()` is identical to `is.symbol()`), but in this book I used symbol consistently because “name” has many other meanings.
@@ -263,9 +268,11 @@ A **call** object represents a captured function call. Call objects are a specia
 You can identify a call object when printed because it looks just like a function call. Confusingly `typeof()` and `str()` print “language” for call objects, but `is.call()` returns `TRUE`:
 
 ```{r}
-ast(read.table("important.csv", row.names = FALSE))
+#| eval: false
 
-x <- expr(read.table("important.csv", row.names = FALSE))
+ast(read.table(file = "important.csv", row.names = FALSE))
+
+x <- expr(read.table(file = "important.csv", row.names = FALSE))
 
 typeof(x)
 
@@ -286,11 +293,20 @@ str(x)
 x[[1]]
 
 is.symbol(x[[1]])
+
+# Arguments:
+names(x)
+
+# Elements (the first is the function to call, the rest are values for arguments):
+lapply(1:length(x), \(.x) {x[[.x]]})
+
 ```
 
 The remainder of the elements are the arguments:
 
 ```{r}
+#| eval: false
+
 as.list(x[-1])
 
 ```
@@ -298,6 +314,8 @@ as.list(x[-1])
 You can extract individual arguments with `[[` or, if named, `$`:
 
 ```{r}
+#| eval: false
+
 x[[2]]
 
 x$row.names
@@ -325,6 +343,8 @@ y[[2]][[1]]
 Extracting specific arguments from calls is challenging because of R’s flexible rules for argument matching: it could potentially be in any location, with the full name, with an abbreviated name, or with no name. To work around this problem, you can use `rlang::call_standardise()` which standardises all arguments to use the full name:
 
 ```{r}
+#| eval: false
+
 x <- expr(mean(c(1, 2, 3), na.rm = TRUE))
 
 eval(x)
@@ -332,9 +352,49 @@ eval(x)
 call_standardise(x)
 
 call_match(x(), x)
+
+
+sample(x = 1:5, size = 3, replace = FALSE)
+
+
+# Save the minimum function as expression:
+x <- expr(sample(1:5, 3, FALSE))
+
+# Standardises all arguments to use the full name:
+call_standardise(x)
+
 ```
 
 
-Look back, you have learnt a lot in 2023: Packages, Quarto document and slides, even got attension from RBNZ and MfE! Like Ollie said, you should be proud of yourself. Take some time off and have a good time with Lara and Eric(Fu). See you in 2024! :)
+Look back, you have learnt a lot in 2023: Packages, Quarto document and slides, even got attention from RBNZ and MfE! Like Ollie said, you should be proud of yourself. Take some time off and have a good time with Lara and Eric(Fu). See you in 2024! :)
+
+Hi! Thank you. I am back :). Today is 2024-05-07, it's been a while! We had a great trip to China and Japan. Shortly after I retuned, I had attend an R Shiny class, and I will be presenting at the R exchange 2024 in two days, wish me luck. 
+
+
+Recall: **Calls can be modified in the same way as lists:**, can a list be transformed to a function call then?
+
+```{r}
+x <- list(x = 1:10, size = 5, replace = TRUE)
+
+# ! Yes you can! do.call constructs and executes a function call from a name or a function and a list of arguments to be passed to it.
+do.call(what = "sample", args = x)
+
+# By position:
+x <- list(1:10, 5, TRUE)
+
+# It also works:
+do.call(what = "sample", args = x)
+
+# Add a new argument:
+x <- list(x = 1:10, size = 5, replace = TRUE)
+
+x[["prob"]] <- c(1, rep(0, times = 9))  # Give 1 the whole weight, the rest of 0 weight
+
+# Yep, it works as expected:
+do.call(what = "sample", args = x)
+```
+
+
+
 
 

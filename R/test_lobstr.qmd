@@ -1,0 +1,14 @@
+---
+title: "Test lobstr output"
+format: html
+---
+
+```{r}
+library(lobstr)
+```
+
+
+```{r}
+ast(f(x, y, z(1, 2)))
+```
+
