@@ -280,7 +280,6 @@ is.call(x)
 
 call_standardise(x)
 
-call_match(x, x())
 ```
 
 ### Subsetting
@@ -371,7 +370,7 @@ Look back, you have learnt a lot in 2023: Packages, Quarto document and slides, 
 Hi! Thank you. I am back :). Today is 2024-05-07, it's been a while! We had a great trip to China and Japan. Shortly after I retuned, I had attend an R Shiny class, and I will be presenting at the R exchange 2024 in two days, wish me luck. 
 
 
-Recall: **Calls can be modified in the same way as lists:**, can a list be transformed to a function call then?
+**Calls can be modified in the same way as lists:**, can a list be transformed to a function call then?
 
 ```{r}
 x <- list(x = 1:10, size = 5, replace = TRUE)
@@ -393,6 +392,100 @@ x[["prob"]] <- c(1, rep(0, times = 9))  # Give 1 the whole weight, the rest of 0
 # Yep, it works as expected:
 do.call(what = "sample", args = x)
 ```
+
+
+### Function position
+
+The first element of the call object is the function position. This contains the function that will be called when the object is evaluated, and is usually a symbol:
+
+```{r}
+lobstr::ast(foo())
+```
+
+While R allows you to surround the name of the function with quotes, the parser converts it to a symbol:
+
+However, sometimes the function doesn’t exist in the current environment and you need to do some computation to retrieve it: for example, if the function is in another package, is a method of an R6 object, or is created by a function factory. In this case, the function position will be occupied by another call:
+
+```{r}
+ast(pkg::foo(1))
+
+ast(obj$foo(1))
+
+ast(foo(1)(2))
+```
+
+### Constructing 
+
+You can construct a call object from its components using `rlang::call2()`. The first argument is the name of the function to call (either as a string, a symbol, or another call). The remaining arguments will be passed along to the call:
+
+```{r}
+x <- 1:10
+
+call2(.fn = "mean", x = expr(x), na.rm = TRUE)
+
+call2(.fn = expr(base::mean), x = expr(x), na.rm = TRUE)
+
+```
+
+Infix calls created in this way still print as usual.
+
+```{r}
+call2(.fn = "<-", expr(x), 10)
+```
+
+Using `call2()` to create complex expressions is a bit clunky. You’ll learn another technique in Chapter 19.
+
+
+### Summary
+
+The following table summarises the appearance of the different expression subtypes in `str()` and `typeof()`:
+
+|                   | `str()`                    | `typeof()`                               |
+|-------------------|:---------------------------|:-----------------------------------------|
+| Scalar constant   | `logi`/`int`/`num`/`chr`   | `logical`/`integer`/`double`/`character` | 
+| Symbol            | `symbol`                   | `symbol`                                 |  
+| Call object       | `language`                 | `language`                               |  
+|Pairlist           | Dotted pair list           | `pairlist`                               |
+|Expression vector  | `expression()`             | `expression`                             |
+
+: Different expression subtypes in `str()` and `typeof()`
+
+
+Both base R and rlang provide functions for testing for each type of input, although the types covered are slightly different. You can easily tell them apart because all the base functions start with `is.` and the rlang functions start with `is_`.
+
+|                   | **Base**                   | **rlang**                |
+|-------------------|:---------------------------|:-------------------------|
+| Scalar constant   | ---                        | `is_syntactic_literal()` | 
+| Symbol            | `is.symbol()`              | `is_symbol()`            |  
+| Call object       | `is.call()`                | `is_call()`              |  
+|Pairlist           | `is.pairlist()`            | `is_pairlist()`          |
+|Expression vector  | `is.expression()`          | ---                      |
+
+
+Let's see this example, pay attention to the details:
+
+```{r}
+# Original example function (it will run and return results):
+purrr::map(1:3, \(.x){.x})
+
+# This step capture the code, and won't return the results:
+purrr::map(1:3, \(.x){.x}) |> expr()
+
+# Save the expression (note that the argument need to be provided):
+code <- purrr::map(.x = 1:3, .f = \(.x){.x}) |> expr()
+
+# To update the function itself:
+code[[1]] <- quote(purrr::map_dbl)
+
+# Change the value provided to the first argument (the object):
+code[[".x"]] <- 1:5
+
+# Change the value provided to the second argument (the function):
+code[[".f"]] <- \(.x) {.x + 1}
+
+```
+
+
 
 
 

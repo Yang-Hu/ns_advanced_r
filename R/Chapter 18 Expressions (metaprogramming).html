@@ -3038,6 +3038,9 @@ vertical-align: -.125em;
   <li><a href="#symbols" id="toc-symbols" class="nav-link" data-scroll-target="#symbols">Symbols</a></li>
   <li><a href="#calls" id="toc-calls" class="nav-link" data-scroll-target="#calls">Calls</a></li>
   <li><a href="#subsetting" id="toc-subsetting" class="nav-link" data-scroll-target="#subsetting">Subsetting</a></li>
+  <li><a href="#function-position" id="toc-function-position" class="nav-link" data-scroll-target="#function-position">Function position</a></li>
+  <li><a href="#constructing" id="toc-constructing" class="nav-link" data-scroll-target="#constructing">Constructing</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -3109,9 +3112,10 @@ vertical-align: -.125em;
 </ul>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="pic/simple.png" class="img-fluid figure-img" style="width:65.0%"></p>
+<p><img src="data:image/png;base64,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" class="img-fluid figure-img" style="width:65.0%"></p>
 </figure>
 </div>
+<!-- Note how to find the picture if the .qmd file is in a sub folder -->
 <ul>
 <li>With <code>lobstr::ast()</code>:</li>
 </ul>
@@ -3452,9 +3456,7 @@ vertical-align: -.125em;
 <span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a><span class="fu">is.call</span>(x)</span>
 <span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a><span class="fu">call_standardise</span>(x)</span>
-<span id="cb66-10"><a href="#cb66-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb66-11"><a href="#cb66-11" aria-hidden="true" tabindex="-1"></a><span class="fu">call_match</span>(x, <span class="fu">x</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a><span class="fu">call_standardise</span>(x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="subsetting" class="level3">
@@ -3548,14 +3550,14 @@ vertical-align: -.125em;
 </div>
 <p>Look back, you have learnt a lot in 2023: Packages, Quarto document and slides, even got attention from RBNZ and MfE! Like Ollie said, you should be proud of yourself. Take some time off and have a good time with Lara and Eric(Fu). See you in 2024! :)</p>
 <p>Hi! Thank you. I am back :). Today is 2024-05-07, it’s been a while! We had a great trip to China and Japan. Shortly after I retuned, I had attend an R Shiny class, and I will be presenting at the R exchange 2024 in two days, wish me luck.</p>
-<p>Recall: <strong>Calls can be modified in the same way as lists:</strong>, can a list be transformed to a function call then?</p>
+<p><strong>Calls can be modified in the same way as lists:</strong>, can a list be transformed to a function call then?</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb90"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">size =</span> <span class="dv">5</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ! Yes you can! do.call constructs and executes a function call from a name or a function and a list of arguments to be passed to it.</span></span>
 <span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(<span class="at">what =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">args =</span> x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 3 3 6 3 3</code></pre>
+<pre><code>[1] 7 5 9 1 4</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="co"># By position:</span></span>
 <span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">5</span>, <span class="cn">TRUE</span>)</span>
@@ -3563,7 +3565,7 @@ vertical-align: -.125em;
 <span id="cb92-4"><a href="#cb92-4" aria-hidden="true" tabindex="-1"></a><span class="co"># It also works:</span></span>
 <span id="cb92-5"><a href="#cb92-5" aria-hidden="true" tabindex="-1"></a><span class="fu">do.call</span>(<span class="at">what =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">args =</span> x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 8 7 4 7 6</code></pre>
+<pre><code>[1]  3  1  6  1 10</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new argument:</span></span>
 <span id="cb94-2"><a href="#cb94-2" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">size =</span> <span class="dv">5</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
@@ -3576,6 +3578,152 @@ vertical-align: -.125em;
 <pre><code>[1] 1 1 1 1 1</code></pre>
 </div>
 </div>
+</section>
+<section id="function-position" class="level3">
+<h3 class="anchored" data-anchor-id="function-position">Function position</h3>
+<p>The first element of the call object is the function position. This contains the function that will be called when the object is evaluated, and is usually a symbol:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>lobstr<span class="sc">::</span><span class="fu">ast</span>(<span class="fu">foo</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>█─foo </code></pre>
+</div>
+</div>
+<p>While R allows you to surround the name of the function with quotes, the parser converts it to a symbol:</p>
+<p>However, sometimes the function doesn’t exist in the current environment and you need to do some computation to retrieve it: for example, if the function is in another package, is a method of an R6 object, or is created by a function factory. In this case, the function position will be occupied by another call:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ast</span>(pkg<span class="sc">::</span><span class="fu">foo</span>(<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>█─█─`::` 
+│ ├─pkg 
+│ └─foo 
+└─1 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ast</span>(obj<span class="sc">$</span><span class="fu">foo</span>(<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>█─█─`$` 
+│ ├─obj 
+│ └─foo 
+└─1 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb102"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ast</span>(<span class="fu">foo</span>(<span class="dv">1</span>)(<span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>█─█─foo 
+│ └─1 
+└─2 </code></pre>
+</div>
+</div>
+</section>
+<section id="constructing" class="level3">
+<h3 class="anchored" data-anchor-id="constructing">Constructing</h3>
+<p>You can construct a call object from its components using <code>rlang::call2()</code>. The first argument is the name of the function to call (either as a string, a symbol, or another call). The remaining arguments will be passed along to the call:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb104"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span></span>
+<span id="cb104-2"><a href="#cb104-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb104-3"><a href="#cb104-3" aria-hidden="true" tabindex="-1"></a><span class="fu">call2</span>(<span class="at">.fn =</span> <span class="st">&quot;mean&quot;</span>, <span class="at">x =</span> <span class="fu">expr</span>(x), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>mean(x = x, na.rm = TRUE)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb106"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a><span class="fu">call2</span>(<span class="at">.fn =</span> <span class="fu">expr</span>(base<span class="sc">::</span>mean), <span class="at">x =</span> <span class="fu">expr</span>(x), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>base::mean(x = x, na.rm = TRUE)</code></pre>
+</div>
+</div>
+<p>Infix calls created in this way still print as usual.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb108"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a><span class="fu">call2</span>(<span class="at">.fn =</span> <span class="st">&quot;&lt;-&quot;</span>, <span class="fu">expr</span>(x), <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>x &lt;- 10</code></pre>
+</div>
+</div>
+<p>Using <code>call2()</code> to create complex expressions is a bit clunky. You’ll learn another technique in Chapter 19.</p>
+</section>
+<section id="summary" class="level3">
+<h3 class="anchored" data-anchor-id="summary">Summary</h3>
+<p>The following table summarises the appearance of the different expression subtypes in <code>str()</code> and <code>typeof()</code>:</p>
+<table class="table">
+<caption>Different expression subtypes in <code>str()</code> and <code>typeof()</code></caption>
+<colgroup>
+<col style="width: 21%">
+<col style="width: 31%">
+<col style="width: 47%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: left;"><code>str()</code></th>
+<th style="text-align: left;"><code>typeof()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Scalar constant</td>
+<td style="text-align: left;"><code>logi</code>/<code>int</code>/<code>num</code>/<code>chr</code></td>
+<td style="text-align: left;"><code>logical</code>/<code>integer</code>/<code>double</code>/<code>character</code></td>
+</tr>
+<tr class="even">
+<td>Symbol</td>
+<td style="text-align: left;"><code>symbol</code></td>
+<td style="text-align: left;"><code>symbol</code></td>
+</tr>
+<tr class="odd">
+<td>Call object</td>
+<td style="text-align: left;"><code>language</code></td>
+<td style="text-align: left;"><code>language</code></td>
+</tr>
+<tr class="even">
+<td>Pairlist</td>
+<td style="text-align: left;">Dotted pair list</td>
+<td style="text-align: left;"><code>pairlist</code></td>
+</tr>
+<tr class="odd">
+<td>Expression vector</td>
+<td style="text-align: left;"><code>expression()</code></td>
+<td style="text-align: left;"><code>expression</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both base R and rlang provide functions for testing for each type of input, although the types covered are slightly different. You can easily tell them apart because all the base functions start with <code>is.</code> and the rlang functions start with <code>is_</code>.</p>
+<table class="table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 38%">
+<col style="width: 35%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: left;"><strong>Base</strong></th>
+<th style="text-align: left;"><strong>rlang</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Scalar constant</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;"><code>is_syntactic_literal()</code></td>
+</tr>
+<tr class="even">
+<td>Symbol</td>
+<td style="text-align: left;"><code>is.symbol()</code></td>
+<td style="text-align: left;"><code>is_symbol()</code></td>
+</tr>
+<tr class="odd">
+<td>Call object</td>
+<td style="text-align: left;"><code>is.call()</code></td>
+<td style="text-align: left;"><code>is_call()</code></td>
+</tr>
+<tr class="even">
+<td>Pairlist</td>
+<td style="text-align: left;"><code>is.pairlist()</code></td>
+<td style="text-align: left;"><code>is_pairlist()</code></td>
+</tr>
+<tr class="odd">
+<td>Expression vector</td>
+<td style="text-align: left;"><code>is.expression()</code></td>
+<td style="text-align: left;">—</td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
