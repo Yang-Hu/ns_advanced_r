@@ -496,6 +496,331 @@ code |> eval()
 ```
 
 
+## Parsing and grammar
+
+We’ve talked a lot about expressions and the AST, but not about how expressions are created from code that you type (like `"x + y"`). The process by which a computer language takes a string and constructs an expression is called **parsing**, and is governed by a set of rules known as a **grammar**. In this section, we’ll use `lobstr::ast()` to explore some of the details of R’s grammar, and then show how you can transform back and forth between expressions and strings.
+
+
+### 18.4.1 Operator precedence
+
+Infix functions introduce two sources of ambiguity. The first source of ambiguity arises from infix functions: what does `1 + 2 * 3` yield? Do you get 9 (i.e. `(1 + 2) * 3)`, or 7 (i.e. `1 + (2 * 3)`)? In other words, which of the two possible parse trees below does R use?
+
+![](../pic/ambig-order.png){fig-align=center width=65%}
+
+Programming languages use conventions called **operator precedence** to resolve this ambiguity. We can use `ast()` to see what R does:
+
+```{r}
+ast(1 + 2 * 3)
+```
+
+Predicting the precedence of arithmetic operations is usually easy because it’s drilled into you in school and is consistent across the vast majority of programming languages.
+
+Predicting the precedence of other operators is harder. There’s one particularly surprising case in R: `!` has a much lower precedence (i.e. it binds less tightly) than you might expect. This allows you to write useful operations like:
+
+```{r}
+ast(!x %in% y)
+```
+
+R has over 30 infix operators divided into 18 precedence groups. While the details are described in `?Syntax`, very few people have memorised the complete ordering. If there’s any confusion, use parentheses!
+
+Note the appearance of the parentheses in the AST as a call to the `(` function.
+
+
+### 18.4.2 Associativity
+
+The second source of ambiguity is introduced by repeated usage of the same infix function. For example, is `1 + 2 + 3` equivalent to `(1 + 2) + 3` or to `1 + (2 + 3)`? This normally doesn’t matter because `x + (y + z) == (x + y) + z`, i.e. addition is associative, but is needed because some S3 classes define + in a non-associative way. For example, ggplot2 overloads + to build up a complex plot from simple pieces; this is non-associative because earlier layers are drawn underneath later layers (i.e. `geom_point() + geom_smooth()` does not yield the same plot as `geom_smooth() + geom_point()`).
+
+In R, most operators are **left-associative**, i.e. the operations on the left are evaluated first:
+
+```{r}
+ast(1 + 2 + 3)
+```
+
+There are two exceptions: exponentiation and assignment.
+
+```{r}
+ast(2^2^3)
+```
+
+
+```{r}
+ast(x <- y <- z)
+```
+
+### 18.4.3 Parsing and deparsing
+
+Most of the time you type code into the console, and R takes care of turning the characters you’ve typed into an AST. But occasionally you have code stored in a string, and you want to parse it yourself. You can do so using `rlang::parse_expr()`:
+
+```{r}
+(x1 <- "y <- x + 10")
+
+is.call(x1)
+
+(x2 <- parse_expr(x1))
+
+is.call(x2)
+```
+
+`parse_expr()` always returns a single expression. If you have multiple expression separated by `;` or `\n`, you’ll need to use `rlang::parse_exprs()`. It returns a list of expressions:
+
+```{r}
+#| eval: false
+
+x3 <- "a <- 1; a + 1"
+
+parse_exprs(x3)
+
+# The expression can be evaluated:
+purrr::map(.x = parse_exprs(x3), .f = \(.x) {
+  
+  eval(.x)
+  
+})
+```
+
+If you find yourself working with strings containing code very frequently, you should reconsider your process. Read Chapter 19 and consider whether you can generate expressions using quasiquotation more safely.
+
+The base equivalent to `parse_exprs()` is `parse()`. It is a little harder to use because it’s specialised for parsing R code stored in files. You need to supply your string to the text argument and it returns an expression vector (Section 18.6.3). I recommend turning the output into a list:
+
+```{r}
+as.list(parse(text = x1))
+```
+
+The inverse of parsing is **deparsing**: given an expression, you want the string that would generate it. This happens automatically when you print an expression, and you can get the string with `rlang::expr_text()`:
+
+```{r}
+z <- expr(y <- x + 10)
+
+is.call(z)
+
+expr_text(z)
+```
+
+
+Parsing and deparsing are not perfectly symmetric because parsing generates an *abstract* syntax tree. This means [we lose backticks around ordinary names, comments, and whitespace]{style="color:red;"}:
+
+```{r}
+cat(expr_text(expr = expr(
+  
+  # This is my function:
+  my_sample <- function(n) {
+    
+    # This is the nested function:
+    sample(x = 1:100, size = n)
+    
+  }
+)))
+```
+
+Be careful when using the base R equivalent, `deparse()`: it returns a character vector with one element for each line. Whenever you use it, remember that the length of the output might be greater than one, and plan accordingly.
+
+```{r}
+deparse(expr = expr(
+  # This is my function:
+  my_sample <- function(n) {
+    
+    # This is the nested function:
+    sample(x = 1:100, size = n)
+    
+  }
+))
+```
+
+
+### 18.4.4 Exercises
+
+1. R uses parentheses in two slightly different ways as illustrated by these two calls:
+
+```{r}
+#| eval: false
+f((1))
+`(`(1 + 1)
+```
+
+Compare and contrast the two uses by referencing the AST.
+
+```{r}
+ast(f((1)))
+
+ast(`(`(1 + 1))
+```
+
+```{r}
+ast(((1 + 1)))
+```
+
+
+2. `=` can also be used in two ways. Construct a simple example that shows both uses.
+
+A: `=` is used both for assignment, and for naming arguments in function calls:
+
+```{r}
+# This will work differently (b and c have the same value of 1):
+b = c = 1
+
+b
+
+# This will work as planned (b is the name of the name vector with length of 1 and name of `c`):
+b = c(c = 1)
+
+
+b
+```
+
+So, when we play with `ast()`, we can directly see that `ast(b = c(c = 1))` is not possible: We get an error because `b =` makes R looking for an argument called `b`. Since `x` is the only argument of `ast()`, we get an error.
+
+```{r}
+ast({b = c(c = 1)})
+```
+
+When we ignore the braces and compare the trees, we can see that the first `=` is used for assignment and the second `=` is part of the syntax of function calls.
+
+
+
+3. Does `-2^2` yield `4` or `-4`? Why?
+
+It yields `-4`, because `^` has a higher operator precedence than `-`, which we can verify by looking at the AST:
+
+```{r}
+-2^2
+
+ast(-2^2)
+```
+
+4. What does `!1 + !1` return? Why?
+
+```{r}
+!1 + !1
+
+ast(!1 + !1)
+```
+
+The right `!1` is evaluated first. It evaluates to `FALSE`, because R coerces every non 0 numeric to `TRUE`, when a logical operator is applied. The negation of `TRUE` then equals `FALSE`.
+
+Next `1 + FALSE` is evaluated to `1`, since `FALSE` is coerced to 0.
+
+Finally `!1` is evaluated to `FALSE`.
+
+Note that if `!` had a higher precedence, the intermediate result would be `FALSE + FALSE`, which would evaluate to `0`.
+
+
+5. Why does `x1 <- x2 <- x3 <- 0` work? Describe the two reasons.
+
+```{r}
+
+ast(x1 <- x2 <- x3 <- 0)
+
+```
+
+One reason is that <- is right-associative, i.e. evaluation takes place from right to left: `x1 <- (x2 <- (x3 <- 0))` The other reason is that `<-` invisibly returns the value on the right-hand side. `(x3 <- 0)`
+
+
+6. Compare the ASTs of `x + y %+% z` and `x ^ y %+% z`. What have you learned about the precedence of custom infix functions?
+
+```{r}
+ast(x + y %+% z)
+
+ast(x ^ y %+% z)
+```
+
+7. What happens if you call `parse_expr()` with a string that generates multiple expressions, e.g. `parse_expr("x + 1; y + 1")`?
+
+In this case `parse_expr()` notices that more than one expression would have to be generated and throws an error. You should use `parse_exprs()` for multiple expressions:
+
+```{r}
+parse_exprs("x + 1; y + 1")
+```
+
+8. What happens if you attempt to parse an invalid expression, e.g. `"a +"` or `"f())"`?
+
+Invalid expressions will lead to an error in the underlying `parse()` function.
+
+```{r}
+#| eval: false
+
+parse_expr("a + ")
+
+parse_expr("f(())")
+
+parse(text = "a + ")
+
+parse(text = "f(())")
+
+```
+
+
+9. `deparse()` produces vectors when the input is long. For example, the following call produces a vector of length two:
+
+
+```{r}
+expr <- expr(g(a + b + c + d + e + f + g + h + i + j + k + l + m + 
+                 n + o + p + q + r + s + t + u + v + w + x + y + z))
+
+deparse(expr)
+
+# One string:
+expr_deparse(expr)
+
+# One string with \n:
+expr_text(expr)
+
+```
+
+10. 
+
+```{r}
+# Output since R 4.0.0
+d <- 1
+pairwise.t.test(2, d + d + d + d + d + d + d + d + 
+                  d + d + d + d + d + d + d + d + d)
+```
+
+
+## Walking AST with recursive functions
+
+To conclude the chapter I’m going to use everything you’ve learned about ASTs to solve more complicated problems. The inspiration comes from the base codetools package, which provides two interesting functions:
+
+- `findGlobals()` locates all global variables used by a function. This can be useful if you want to check that your function doesn’t inadvertently rely on variables defined in their parent environment.
+
+- `checkUsage()` checks for a range of common problems including unused local variables, unused parameters, and the use of partial argument matching.
+
+
+Getting all of the details of these functions correct is fiddly, so we won’t fully develop the ideas. Instead we’ll focus on the big underlying idea: recursion on the AST. Recursive functions are a natural fit to tree-like data structures because a recursive function is made up of two parts that correspond to the two parts of the tree:
+
+
+- The **recursive case** handles the nodes in the tree. Typically, you’ll do something to each child of a node, usually calling the recursive function again, and then combine the results back together again. For expressions, you’ll need to handle calls and pairlists (function arguments).
+
+- The **base case** handles the leaves of the tree. The base cases ensure that the function eventually terminates, by solving the simplest cases directly. For expressions, you need to handle symbols and constants in the base case.
+
+
+To make this pattern easier to see, we’ll need two helper functions. First we define `expr_type()` which will return “constant” for constant, “symbol” for symbols, “call”, for calls, “pairlist” for pairlists, and the “type” of anything else:
+
+```{r}
+expr_type <- function(x) {
+  if (rlang::is_syntactic_literal(x)) {
+    "constant"
+  } else if (is.symbol(x)) {
+    "symbol"
+  } else if (is.call(x)) {
+    "call"
+  } else if (is.pairlist(x)) {
+    "pairlist"
+  } else {
+    typeof(x)
+  }
+}
+
+expr_type(expr("a"))
+
+expr_type(expr(x))
+
+expr_type(expr(f(1, 2)))
+
+```
+
+
+
+
 
 
 
