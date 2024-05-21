@@ -112,7 +112,7 @@ You might have wondered what makes these *abstract syntax trees*. They are abstr
 ast(
   # Hey!
   f(x, y)
-  )
+)
 ```
 
 There’s only one place where white space affects the AST:
@@ -817,6 +817,261 @@ expr_type(expr(x))
 expr_type(expr(f(1, 2)))
 
 ```
+
+We’ll couple this with a wrapper around the switch function:
+
+```{r}
+
+switch_expr <- function(x, ...) {
+  switch(expr_type(x),
+         ...,
+         stop("Don't know how to handle type ", typeof(x), call. = FALSE)
+  )
+}
+
+```
+
+With these two functions in hand, we can write a basic template for any function that walks the AST using `switch()`:
+
+```{r}
+recurse_call <- function(x) {
+  switch_expr(x,
+              # Base cases
+              symbol = ,
+              constant = ,
+              
+              # Recursive cases
+              call = ,
+              pairlist =
+  )
+}
+```
+
+Typically, solving the base case is easy, so we’ll do that first, then check the results. The recursive cases are trickier, and will often require some functional programming.
+
+
+### Finding `F` and `T`
+
+We’ll start with a function that determines whether another function uses the logical abbreviations `T` and `F` because using them is often considered to be poor coding practice. Our goal is to return `TRUE` if the input contains a logical abbreviation, and `FALSE` otherwise.
+
+Let’s first find the type of `T` versus `TRUE`:
+
+```{r}
+expr_type(expr(TRUE))
+
+expr_type(expr(T))
+```
+
+`TRUE` is parsed as a logical vector of length one, while `T` is parsed as a name. This tells us how to write our base cases for the recursive function: a constant is never a logical abbreviation, and a symbol is an abbreviation if it’s “F” or “T”:
+
+```{r}
+logical_abbr_rec <- function(x) {
+  switch_expr(x,
+              constant = FALSE,
+              symbol = as_string(x) %in% c("F", "T")
+  )
+}
+
+logical_abbr_rec(expr(TRUE))
+
+logical_abbr_rec(expr(T))
+
+```
+
+
+I’ve written `logical_abbr_rec()` function assuming that the input will be an expression as this will make the recursive operation simpler. However, when writing a recursive function it’s common to write a wrapper that provides defaults or makes the function a little easier to use. Here we’ll typically make a wrapper that quotes its input (we’ll learn more about that in the next chapter), so we don’t need to use `expr()` every time.
+
+```{r}
+
+logical_abbr <- function(x) {
+  logical_abbr_rec(enexpr(x))
+}
+
+logical_abbr(T)
+
+logical_abbr(FALSE)
+
+
+```
+
+Next we need to implement the recursive cases. Here we want to do the same thing for calls and for pairlists: recursively apply the function to each subcomponent, and return `TRUE` if any subcomponent contains a logical abbreviation. This is made easy by `purrr::some()`, which iterates over a list and returns `TRUE` if the predicate function is true for any element.
+
+```{r}
+logical_abbr_rec <- function(x) {
+  switch_expr(x,
+              # Base cases
+              constant = FALSE,
+              symbol = as_string(x) %in% c("F", "T"),
+              
+              # Recursive cases
+              call = ,
+              pairlist = purrr::some(x, logical_abbr_rec)
+  )
+}
+
+logical_abbr(mean(x, na.rm = T))
+
+logical_abbr(function(x, na.rm = T) FALSE)
+
+```
+
+
+## Specialised data structures
+
+There are two data structures and one special symbol that we need to cover for the sake of completeness. They are not usually important in practice.
+
+
+### Pairlists
+
+Pairlists are a remnant of R’s past and have been replaced by lists almost everywhere. The only place you are likely to see pairlists in R is when working with calls to the function function, as the formal arguments to a function are stored in a pairlist:
+
+```{r}
+f <- expr(function(x, y = 10) x + y)
+
+args <- f[[2]]
+
+args
+
+typeof(args)
+```
+
+Fortunately, whenever you encounter a pairlist, you can treat it just like a regular list:
+
+```{r}
+pl <- pairlist(x = 1, y = 2)
+
+length(pl)
+
+pl$x
+```
+
+Behind the scenes pairlists are implemented using a different data structure, a linked list instead of an array. That makes subsetting a pairlist much slower than subsetting a list, but this has little practical impact.
+
+
+
+### Missing arguments
+
+The special symbol that needs a little extra discussion is the empty symbol, which is used to represent missing arguments (not missing values!). You only need to care about the missing symbol if you’re programmatically creating functions with missing arguments; we’ll come back to that in Section 19.4.3.
+
+You can make an empty symbol with `missing_arg()` (or `expr()`):
+
+```{r}
+missing_arg()
+
+typeof(missing_arg())
+```
+
+An empty symbol doesn’t print anything, so you can check if you have one with `rlang::is_missing()`:
+
+```{r}
+is_missing(missing_arg())
+```
+
+You’ll find them in the wild in function formals:
+
+```{r}
+f <- expr(function(x, y = 10) x + y)
+
+f[[1]]  # Function's name
+
+f[[2]]  # Arguments
+
+f[[3]]  # Body of the function (?)
+
+f[[4]]  # The whole function
+
+length(f)
+
+
+args <- f[[2]]
+
+is_missing(args[[1]])
+
+# or:
+lapply(args, \(.x){
+  is_missing(.x)
+})
+
+```
+
+This is particularly important for `...` which is always associated with an empty symbol:
+
+```{r}
+f <- expr(function(...) list(...))
+
+length(f)
+
+f[[1]]
+f[[2]]
+f[[3]]
+f[[4]]
+
+args <- f[[2]]
+is_missing(args[[1]])
+
+length(args)
+```
+
+The empty symbol has a peculiar property: if you bind it to a variable, then access that variable, you will get an error:
+
+```{r}
+m <- missing_arg()
+
+m
+```
+
+But you won’t if you store it inside another data structure!
+
+```{r}
+ms <- list(missing_arg(), missing_arg())
+
+ms[[1]]
+```
+
+If you need to preserve the missingness of a variable, `rlang::maybe_missing()` is often helpful. It allows you to refer to a potentially missing variable without triggering the error. See the documentation for use cases and more details.
+
+
+### Expression vectors
+
+Finally, we need to briefly discuss the expression vector. Expression vectors are only produced by two base functions: `expression()` and `parse()`:
+
+```{r}
+exp1 <- parse(
+  text = c("
+  x <- 4
+  x
+  ")
+)
+
+exp2 <- expression(x <- 4, x)
+
+
+typeof(exp1)
+typeof(exp2)
+
+exp1
+exp2
+
+```
+
+Like calls and pairlists, expression vectors behave like lists:
+
+```{r}
+length(exp1)
+
+exp1[[1]]
+exp1[[2]]
+```
+
+Conceptually, an expression vector is just a list of expressions. The only difference is that calling `eval()` on an expression evaluates each individual expression. I don’t believe this advantage merits introducing a new data structure, so instead of expression vectors I just use lists of expressions.
+
+
+
+
+
+
+
+
 
 
 

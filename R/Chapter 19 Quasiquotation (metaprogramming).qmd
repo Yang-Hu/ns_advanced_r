@@ -1,0 +1,25 @@
+---
+title: "Chapter 19 Quasiquotation (metaprogramming)"
+author: "Yang Hu"
+format: 
+    html:
+      self-contained: true
+      embed-resources: true
+
+number-sections: false
+code-annotations: hover
+    
+toc: true
+toc-title: "Contents"
+toc-location: "left"
+toc-depth: 4
+
+execute: 
+  freeze: auto
+  warning: true
+---
+
+
+
+
+
