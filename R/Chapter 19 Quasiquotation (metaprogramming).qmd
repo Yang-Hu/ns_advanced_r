@@ -428,13 +428,331 @@ expr(print("Today is", !!x))
 
 ```
 
+`!!` preserves operator precedence because it works with expressions.
+
+```{r}
+
+gas <- 50
+
+shopping <- 250
+
+x1 <- expr(!!gas + !!shopping + 80)
+
+expr(!!x1 / 2)
+
+# --
+
+x1 <- expr(x + 1)
+x2 <- expr(x + 2)
+
+expr(!!x1 / !!x2)
+
+```
+
+If we simply pasted the text of the expressions together, we’d end up with `x + 1 / x + 2`, which has a very different AST:
+
+```{r}
+expr(x + 1 / x + 2)
+```
 
 
 
+![](../pic/infix-bad.png){fig-align=center width=65%}
 
 
 
+### Unquoting a function
 
+`!!` is most commonly used to replace the arguments to a function, but you can also use it to replace the function. The only challenge here is operator precedence: `expr(!!f(x, y))` unquotes the result of `f(x, y)`, so you need an extra pair of parentheses.
+
+```{r}
+f <- expr(mean)
+
+f
+
+expr((!!f)(x,y))
+
+# --
+
+f <- expr(foo)
+
+expr((!!f)(x, y))
+```
+
+This also works when `f` is a call:
+
+```{r}
+f <- expr(pkg::foo)
+
+expr((!!f)(x, y))
+
+```
+
+Because of the large number of parentheses involved, it can be clearer to use `rlang::call2()`:
+
+```{r}
+f <- expr(pkg::foo)
+
+call2(f, expr(x), expr(y))
+```
+
+
+### Unquoting a missing argument
+
+Very occasionally it is useful to unquote a missing argument (Section 18.6.2), but the naive approach doesn’t work:
+
+```{r}
+#| eval: false
+
+arg <- missing_arg()
+
+expr(foo(!!arg, !!arg))
+
+```
+
+You can work around this with the `rlang::maybe_missing()` helper:
+
+```{r}
+#| eval: false
+
+expr(foo(!!maybe_missing(arg), !!maybe_missing(arg)))
+```
+
+
+###  Unquoting in special forms
+
+There are a few special forms where unquoting is a syntax error. Take `$` for example: it must always be followed by the name of a variable, not another expression. This means attempting to unquote with `$` will fail with a syntax error:
+
+```{r}
+#| eval: false
+
+x <- expr(Species)
+
+expr(iris$!!x)
+```
+
+To make unquoting work, you’ll need to use the prefix form (Section 6.8.1):
+
+```{r}
+expr(`$`(iris, !!x))
+```
+
+
+
+### Unquoting many arguments
+
+`!!` is a one-to-one replacement. `!!!` (called “unquote-splice”, and pronounced bang-bang-bang) is a one-to-many replacement. It takes a list of expressions and inserts them at the location of the `!!!`:
+
+```{r}
+xs <- exprs(1, a, -b)
+
+expr(f(!!!xs, y))
+
+# or with names:
+
+ys <- set_names(xs, c("a", "b", "c"))
+
+expr(f(!!!ys, d = 4))
+
+```
+
+![](../pic/bang-bang-bang.png){fig-align=center width=65%}
+
+
+`!!!` can be used in any rlang function that takes `...` regardless of whether or not `...` is quoted or evaluated. We’ll come back to this in Section 19.6; for now note that this can be useful in `call2()`.
+
+```{r}
+call2("f", !!!xs, expr(y))
+```
+
+
+### The polite fiction of `!!`
+
+So far we have acted as if `!!` and `!!!` are regular prefix operators like `+` , `-`, and `!`. They’re not. From R’s perspective, `!!` and `!!!` are simply the repeated application of `!`:
+
+```{r}
+#| eval: false
+
+!TRUE
+
+!!TRUE
+
+!!!TRUE
+  
+```
+
+`!!` and `!!!` behave specially inside all quoting functions powered by rlang, where they behave like real operators with precedence equivalent to unary `+` and `-`. This requires considerable work inside rlang, but means that you can write `!!x + !!y` instead of `(!!x) + (!!y)`.
+
+The biggest downside to using a fake operator is that you might get silent errors when misusing `!!` outside of quasiquoting functions. Most of the time this is not an issue because `!!` is typically used to unquote expressions or quosures. Since expressions are not supported by the negation operator, you will get an argument type error in this case:
+
+```{r}
+#| eval: false
+
+x <- quote(variable)
+
+!!x
+```
+
+But you can get silently incorrect results when working with numeric values:
+
+```{r}
+df <- data.frame(x = 1:5)
+
+y <- 100
+
+with(df, x + !!y)
+
+```
+
+Given these drawbacks, you might wonder why we introduced new syntax instead of using regular function calls. Indeed, early versions of tidy evaluation used function calls like `UQ()` and `UQS()`. However, they’re not really function calls, and pretending they are leads to a misleading mental mode. We chose `!!` and `!!!` as the least-bad solution:
+
+- They are visually strong and don’t look like existing syntax. When you see `!!x` or `!!!x` it’s clear that something unusual is happening.
+
+- They override a rarely used piece of syntax, as double negation is not a common pattern in R99. If you do need it, you can just add parentheses `!(!x)`.
+
+
+
+### Non-standard ASTs
+
+With unquoting, it’s easy to create non-standard ASTs, i.e. ASTs that contain components that are not expressions. (It is also possible to create non-standard ASTs by directly manipulating the underlying objects, but it’s harder to do so accidentally.) These are valid, and occasionally useful, but their correct use is beyond the scope of this book. However, it’s important to learn about them, because they can be deparsed, and hence printed, in misleading ways.
+
+For example, if you inline more complex objects, their attributes are not printed. This can lead to confusing output:
+
+```{r}
+x1 <- expr(class(!!data.frame(x = 10)))
+x1
+#> class(list(x = 10))
+eval(x1)
+#> [1] "data.frame"
+```
+
+You have two main tools to reduce this confusion: `rlang::expr_print()` and `lobstr::ast()`:
+
+```{r}
+expr_print(x1)
+#> class(<df[,1]>)
+lobstr::ast(!!x1)
+#> █─class 
+#> └─<inline data.frame>
+```
+
+Another confusing case arises if you inline an integer sequence:
+
+```{r}
+x2 <- expr(f(!!c(1L, 2L, 3L, 4L, 5L)))
+x2
+
+expr_print(x2)
+
+lobstr::ast(!!x2)
+```
+
+### Exercises
+
+```{r}
+xy <- expr(x + y)
+xz <- expr(x + z)
+yz <- expr(y + z)
+abc <- exprs(a, b, c)
+
+# 1. 
+expr(!!xy / !!xz)
+
+# 2.
+expr(-`^`(!!xz, !!yz))
+# or
+expr(-(!!xz) ^ !!(yz))
+
+# 3.
+expr(((!!xy)) + !!yz - !!xy)
+
+# 4.
+expr(atan2(!!xy, !!yz))
+
+# 5.
+expr(sum(!!xy, !!xy, !!yz))
+
+# 6.
+expr(sum(!!!(abc)))
+
+# 7. 
+expr(mean(c(!!!(abc)), na.rm = TRUE))
+
+# 8.
+expr(foo(a = !!xy, b = !!yz))
+
+```
+
+
+## Non-quoting
+
+Base R has one function that implements quasiquotation: `bquote()`. It uses `.()` for unquoting:
+
+```{r}
+xyz <- bquote((x + y + z))
+
+bquote(-.(xyz) / 2)
+
+```
+
+`bquote()` isn’t used by any other function in base R, and has had relatively little impact on how R code is written. There are three challenges to effective use of `bquote()`:
+
+- It is only easily used with your code; it is hard to apply it to arbitrary code supplied by a user.
+
+- It does not provide an unquote-splice operator that allows you to unquote multiple expressions stored in a list.
+
+- It lacks the ability to handle code accompanied by an environment, which is crucial for functions that evaluate code in the context of a data frame, like `subset()` and friends.
+
+Base functions that quote an argument use some other technique to allow indirect specification. Base R approaches selectively turn quoting off, rather than using unquoting, so I call them **non-quoting** techniques.
+
+
+There are four basic forms seen in base R:
+
+- A pair of quoting and non-quoting functions. For example, `$` has two arguments, and the second argument is quoted. This is easier to see if you write in prefix form: `mtcars$cyl` is equivalent to `` `$`(mtcars, cyl) ``. If you want to refer to a variable indirectly, you use [[, as it takes the name of a variable as a string.
+
+```{r}
+x <- list(var = 1, y = 2)
+
+var <- "y"
+
+x$var
+
+x[[var]]
+
+
+```
+
+
+## `...` (dot-dot-dot)
+
+
+TBC
+
+
+```{r}
+dfs <- list(
+  a = data.frame(x = 1, y = 2),
+  b = data.frame(x = 3, y = 4)
+)
+
+rbind(dfs$a, dfs$b)
+
+reduce(.x = dfs, .f = rbind)
+
+# or
+dplyr::bind_rows(!!!dfs)
+```
+
+
+```{r}
+var <- "x"
+
+val <- c(4, 3, 9)
+
+tibble::tibble(!!var := val)
+
+
+```
 
 
 
