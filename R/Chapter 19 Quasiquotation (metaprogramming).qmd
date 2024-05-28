@@ -777,7 +777,7 @@ name <- "Yang"
 
 tibble::tibble(!!name := 1:4)
 
-tibble::tibble(!!var:= val)
+tibble::tibble(!!var := val)
 ```
 
 Note the use of `:=` (pronounced colon-equals) rather than `=`. Unfortunately we need this new operation because R’s grammar does not allow expressions as argument names:
@@ -791,6 +791,91 @@ tibble::tibble(!!var = value)
 `:=` is like a vestigial organ: it’s recognised by R’s parser, but it doesn’t have any code associated with it. It looks like an `=` but allows expressions on either side, making it a more flexible alternative to `=`. It is used in data.table for similar reasons.
 
 Base R takes a different approach, which we’ll come back to in Section 19.6.4.
+
+We say functions that support these tools, without quoting arguments, have **tidy dots**. To gain tidy dots behaviour in your own function, all you need to do is use `list2()`.
+
+
+### Examples
+
+One place we could use `list2()` is to create a wrapper around `attributes()` that allows us to set attributes flexibly:
+
+```{r}
+set_attr <- function(.x, ...) {
+  attr <- rlang::list2(...)
+  attributes(.x) <- attr
+  .x
+}
+
+attrs <- list(x = 1, y = 2)
+attr_name <- "z"
+
+1:10 |> 
+  set_attr(w = 0, !!!attrs, !!attr_name := 3) |> str()
+
+```
+
+
+### `exec()`
+
+What if you want to use this technique with a function that doesn’t have tidy dots? One option is to use `rlang::exec()` to call a function with some arguments supplied directly (in `...`) and others indirectly (in a list):
+
+```{r}
+# Directly
+exec(.fn = "mean", x = 1:10, na.rm = TRUE, trim = 0.1)
+
+# Indirectly
+args <- list(x = 1:10, na.rm = TRUE, trim = 0.1)
+
+exec("mean", !!!args)   # Evaluate the results
+
+# --
+
+call2("mean", !!!args)  # Create the expression
+
+
+# Mixed
+
+params <- list(na.rm = TRUE, trim = 0.1)
+
+exec("mean", x = 1:10, !!!params)
+
+```
+
+`rlang::exec()` also makes it possible to supply argument names indirectly:
+
+```{r}
+arg_name <- "na.rm"
+
+arg_val <- TRUE
+
+exec(.fn = "mean", x = c(1, 2, 3, NA), !!arg_name := arg_val)
+
+```
+
+And finally, it’s useful if you have a vector of function names or a list of functions that you want to call with the same arguments:
+
+```{r}
+x <- c(runif(10), NA)
+
+funs <- c("mean", "median", "sd")
+
+map_dbl(.x = funs, .f = \(.x) {
+  
+  exec(.fn = .x, x = x, na.rm = TRUE)
+  
+})
+
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
