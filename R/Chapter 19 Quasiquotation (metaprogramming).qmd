@@ -725,9 +725,11 @@ x[[var]]
 
 ## `...` (dot-dot-dot)
 
+`!!!` is useful because it’s not uncommon to have a list of expressions that you want to insert into a call. It turns out that this pattern is common elsewhere. Take the following two motivating problems:
 
-TBC
+- What do you do if the elements you want to put in `...` are already stored in a list? For example, imagine you have a list of data frames that you want to `rbind()` together:
 
+You could solve this specific case with `rbind(dfs$a, dfs$b)`, but how do you generalise that solution to a list of arbitrary length?
 
 ```{r}
 dfs <- list(
@@ -751,16 +753,44 @@ val <- c(4, 3, 9)
 
 tibble::tibble(!!var := val)
 
+```
+
+In this case, you could create a data frame and then change names (i.e. `setNames(data.frame(val), var)`), but this feels inelegant. How can we do better?
+
+
+One way to think about these problems is to draw explicit parallels to quasiquotation:
+
+- Row-binding multiple data frames is like unquote-splicing: we want to inline individual elements of the list into the call:
+
+```{r}
+dplyr::bind_rows(!!!dfs)
 
 ```
 
+When used in this context, the behaviour of `!!!` is known as “spatting” in Ruby, Go, PHP, and Julia. It is closely related to `*args` (star-args) and `**kwarg` (star-star-kwargs) in Python, which are sometimes called argument unpacking.
 
 
+- The second problem is like unquoting the left-hand side of `=`: rather than interpreting var literally, we want to use the value stored in the variable called `var`:
 
+```{r}
+name <- "Yang"
 
+tibble::tibble(!!name := 1:4)
 
+tibble::tibble(!!var:= val)
+```
 
+Note the use of `:=` (pronounced colon-equals) rather than `=`. Unfortunately we need this new operation because R’s grammar does not allow expressions as argument names:
 
+```{r}
+#| eval: false
+tibble::tibble(!!var = value)
+
+```
+
+`:=` is like a vestigial organ: it’s recognised by R’s parser, but it doesn’t have any code associated with it. It looks like an `=` but allows expressions on either side, making it a more flexible alternative to `=`. It is used in data.table for similar reasons.
+
+Base R takes a different approach, which we’ll come back to in Section 19.6.4.
 
 
 
