@@ -3049,6 +3049,12 @@ vertical-align: -.125em;
   <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
   </ul></li>
   <li><a href="#non-quoting" id="toc-non-quoting" class="nav-link" data-scroll-target="#non-quoting">Non-quoting</a></li>
+  <li><a href="#dot-dot-dot" id="toc-dot-dot-dot" class="nav-link" data-scroll-target="#dot-dot-dot"><code>...</code> (dot-dot-dot)</a>
+  <ul>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
+  <li><a href="#exec" id="toc-exec" class="nav-link" data-scroll-target="#exec"><code>exec()</code></a></li>
+  <li><a href="#dots_list" id="toc-dots_list" class="nav-link" data-scroll-target="#dots_list"><code>dots_list()</code></a></li>
+  </ul></li>
   </ul>
 </nav>
 </div>
@@ -3520,13 +3526,13 @@ $y
 <div class="cell">
 <div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">expr</span>(<span class="fu">print</span>(<span class="st">&quot;Today is&quot;</span>, <span class="sc">!!</span><span class="fu">format</span>(<span class="fu">Sys.Date</span>(), <span class="st">&quot;%Y %m %d.&quot;</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>print(&quot;Today is&quot;, &quot;2024 05 28.&quot;)</code></pre>
+<pre><code>print(&quot;Today is&quot;, &quot;2024 05 31.&quot;)</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">format</span>(<span class="fu">Sys.Date</span>(), <span class="st">&quot;%Y %m %d.&quot;</span>)</span>
 <span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a><span class="fu">expr</span>(<span class="fu">print</span>(<span class="st">&quot;Today is&quot;</span>, <span class="sc">!!</span>x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>print(&quot;Today is&quot;, &quot;2024 05 28.&quot;)</code></pre>
+<pre><code>print(&quot;Today is&quot;, &quot;2024 05 31.&quot;)</code></pre>
 </div>
 </div>
 <p><code>!!</code> preserves operator precedence because it works with expressions.</p>
@@ -3631,7 +3637,7 @@ $y
 <div class="cell">
 <div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="fu">expr</span>(<span class="st">`</span><span class="at">$</span><span class="st">`</span>(iris, <span class="sc">!!</span>x))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>iris$&quot;2024 05 28.&quot;</code></pre>
+<pre><code>iris$&quot;2024 05 31.&quot;</code></pre>
 </div>
 </div>
 </section>
@@ -3829,6 +3835,227 @@ $y
 <ul>
 <li>A pair of quoting and non-quoting functions. For example, <code>$</code> has two arguments, and the second argument is quoted. This is easier to see if you write in prefix form: <code>mtcars$cyl</code> is equivalent to <code>`$`(mtcars, cyl)</code>. If you want to refer to a variable indirectly, you use [[, as it takes the name of a variable as a string.</li>
 </ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb134"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb134-1"><a href="#cb134-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">var =</span> <span class="dv">1</span>, <span class="at">y =</span> <span class="dv">2</span>)</span>
+<span id="cb134-2"><a href="#cb134-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb134-3"><a href="#cb134-3" aria-hidden="true" tabindex="-1"></a>var <span class="ot">&lt;-</span> <span class="st">&quot;y&quot;</span></span>
+<span id="cb134-4"><a href="#cb134-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb134-5"><a href="#cb134-5" aria-hidden="true" tabindex="-1"></a>x<span class="sc">$</span>var</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb136"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb136-1"><a href="#cb136-1" aria-hidden="true" tabindex="-1"></a>x[[var]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2</code></pre>
+</div>
+</div>
+</section>
+<section id="dot-dot-dot" class="level2">
+<h2 class="anchored" data-anchor-id="dot-dot-dot"><code>...</code> (dot-dot-dot)</h2>
+<p><code>!!!</code> is useful because it’s not uncommon to have a list of expressions that you want to insert into a call. It turns out that this pattern is common elsewhere. Take the following two motivating problems:</p>
+<ul>
+<li>What do you do if the elements you want to put in <code>...</code> are already stored in a list? For example, imagine you have a list of data frames that you want to <code>rbind()</code> together:</li>
+</ul>
+<p>You could solve this specific case with <code>rbind(dfs$a, dfs$b)</code>, but how do you generalise that solution to a list of arbitrary length?</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb138"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1" aria-hidden="true" tabindex="-1"></a>dfs <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb138-2"><a href="#cb138-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">a =</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="dv">1</span>, <span class="at">y =</span> <span class="dv">2</span>),</span>
+<span id="cb138-3"><a href="#cb138-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">b =</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="dv">3</span>, <span class="at">y =</span> <span class="dv">4</span>)</span>
+<span id="cb138-4"><a href="#cb138-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb138-5"><a href="#cb138-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb138-6"><a href="#cb138-6" aria-hidden="true" tabindex="-1"></a><span class="fu">rbind</span>(dfs<span class="sc">$</span>a, dfs<span class="sc">$</span>b)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  x y
+1 1 2
+2 3 4</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb140"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a><span class="fu">reduce</span>(<span class="at">.x =</span> dfs, <span class="at">.f =</span> rbind)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  x y
+1 1 2
+2 3 4</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb142"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a><span class="co"># or</span></span>
+<span id="cb142-2"><a href="#cb142-2" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="sc">!!!</span>dfs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  x y
+1 1 2
+2 3 4</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb144"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1" aria-hidden="true" tabindex="-1"></a>var <span class="ot">&lt;-</span> <span class="st">&quot;x&quot;</span></span>
+<span id="cb144-2"><a href="#cb144-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-3"><a href="#cb144-3" aria-hidden="true" tabindex="-1"></a>val <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">9</span>)</span>
+<span id="cb144-4"><a href="#cb144-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-5"><a href="#cb144-5" aria-hidden="true" tabindex="-1"></a>tibble<span class="sc">::</span><span class="fu">tibble</span>(<span class="sc">!!</span><span class="at">var :=</span> val)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 1
+      x
+  &lt;dbl&gt;
+1     4
+2     3
+3     9</code></pre>
+</div>
+</div>
+<p>In this case, you could create a data frame and then change names (i.e. <code>setNames(data.frame(val), var)</code>), but this feels inelegant. How can we do better?</p>
+<p>One way to think about these problems is to draw explicit parallels to quasiquotation:</p>
+<ul>
+<li>Row-binding multiple data frames is like unquote-splicing: we want to inline individual elements of the list into the call:</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb146"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(<span class="sc">!!!</span>dfs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  x y
+1 1 2
+2 3 4</code></pre>
+</div>
+</div>
+<p>When used in this context, the behaviour of <code>!!!</code> is known as “spatting” in Ruby, Go, PHP, and Julia. It is closely related to <code>*args</code> (star-args) and <code>**kwarg</code> (star-star-kwargs) in Python, which are sometimes called argument unpacking.</p>
+<ul>
+<li>The second problem is like unquoting the left-hand side of <code>=</code>: rather than interpreting var literally, we want to use the value stored in the variable called <code>var</code>:</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb148"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1" aria-hidden="true" tabindex="-1"></a>name <span class="ot">&lt;-</span> <span class="st">&quot;Yang&quot;</span></span>
+<span id="cb148-2"><a href="#cb148-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb148-3"><a href="#cb148-3" aria-hidden="true" tabindex="-1"></a>tibble<span class="sc">::</span><span class="fu">tibble</span>(<span class="sc">!!</span><span class="at">name :=</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 1
+   Yang
+  &lt;int&gt;
+1     1
+2     2
+3     3
+4     4</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb150"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb150-1"><a href="#cb150-1" aria-hidden="true" tabindex="-1"></a>tibble<span class="sc">::</span><span class="fu">tibble</span>(<span class="sc">!!</span><span class="at">var :=</span> val)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 1
+      x
+  &lt;dbl&gt;
+1     4
+2     3
+3     9</code></pre>
+</div>
+</div>
+<p>Note the use of <code>:=</code> (pronounced colon-equals) rather than <code>=</code>. Unfortunately we need this new operation because R’s grammar does not allow expressions as argument names:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb152"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb152-1"><a href="#cb152-1" aria-hidden="true" tabindex="-1"></a>tibble<span class="sc">::</span><span class="fu">tibble</span>(<span class="sc">!!</span><span class="at">var =</span> value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><code>:=</code> is like a vestigial organ: it’s recognised by R’s parser, but it doesn’t have any code associated with it. It looks like an <code>=</code> but allows expressions on either side, making it a more flexible alternative to <code>=</code>. It is used in data.table for similar reasons.</p>
+<p>Base R takes a different approach, which we’ll come back to in Section 19.6.4.</p>
+<p>We say functions that support these tools, without quoting arguments, have <strong>tidy dots</strong>. To gain tidy dots behaviour in your own function, all you need to do is use <code>list2()</code>.</p>
+<section id="examples" class="level3">
+<h3 class="anchored" data-anchor-id="examples">Examples</h3>
+<p>One place we could use <code>list2()</code> is to create a wrapper around <code>attributes()</code> that allows us to set attributes flexibly:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb153"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb153-1"><a href="#cb153-1" aria-hidden="true" tabindex="-1"></a>set_attr <span class="ot">&lt;-</span> <span class="cf">function</span>(.x, ...) {</span>
+<span id="cb153-2"><a href="#cb153-2" aria-hidden="true" tabindex="-1"></a>  attr <span class="ot">&lt;-</span> rlang<span class="sc">::</span><span class="fu">list2</span>(...)</span>
+<span id="cb153-3"><a href="#cb153-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">attributes</span>(.x) <span class="ot">&lt;-</span> attr</span>
+<span id="cb153-4"><a href="#cb153-4" aria-hidden="true" tabindex="-1"></a>  .x</span>
+<span id="cb153-5"><a href="#cb153-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb153-6"><a href="#cb153-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb153-7"><a href="#cb153-7" aria-hidden="true" tabindex="-1"></a>attrs <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span>, <span class="at">y =</span> <span class="dv">2</span>)</span>
+<span id="cb153-8"><a href="#cb153-8" aria-hidden="true" tabindex="-1"></a>attr_name <span class="ot">&lt;-</span> <span class="st">&quot;z&quot;</span></span>
+<span id="cb153-9"><a href="#cb153-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb153-10"><a href="#cb153-10" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span><span class="sc">:</span><span class="dv">10</span> <span class="sc">|&gt;</span> </span>
+<span id="cb153-11"><a href="#cb153-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_attr</span>(<span class="at">w =</span> <span class="dv">0</span>, <span class="sc">!!!</span>attrs, <span class="sc">!!</span><span class="at">attr_name :=</span> <span class="dv">3</span>) <span class="sc">|&gt;</span> <span class="fu">str</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> int [1:10] 1 2 3 4 5 6 7 8 9 10
+ - attr(*, &quot;w&quot;)= num 0
+ - attr(*, &quot;x&quot;)= num 1
+ - attr(*, &quot;y&quot;)= num 2
+ - attr(*, &quot;z&quot;)= num 3</code></pre>
+</div>
+</div>
+</section>
+<section id="exec" class="level3">
+<h3 class="anchored" data-anchor-id="exec"><code>exec()</code></h3>
+<p>What if you want to use this technique with a function that doesn’t have tidy dots? One option is to use <code>rlang::exec()</code> to call a function with some arguments supplied directly (in <code>...</code>) and others indirectly (in a list):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb155"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb155-1"><a href="#cb155-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Directly</span></span>
+<span id="cb155-2"><a href="#cb155-2" aria-hidden="true" tabindex="-1"></a><span class="fu">exec</span>(<span class="at">.fn =</span> <span class="st">&quot;mean&quot;</span>, <span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="at">trim =</span> <span class="fl">0.1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5.5</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb157"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb157-1"><a href="#cb157-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Indirectly</span></span>
+<span id="cb157-2"><a href="#cb157-2" aria-hidden="true" tabindex="-1"></a>args <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="at">trim =</span> <span class="fl">0.1</span>)</span>
+<span id="cb157-3"><a href="#cb157-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb157-4"><a href="#cb157-4" aria-hidden="true" tabindex="-1"></a><span class="fu">exec</span>(<span class="st">&quot;mean&quot;</span>, <span class="sc">!!!</span>args)   <span class="co"># Evaluate the results</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5.5</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb159"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb159-1"><a href="#cb159-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb159-2"><a href="#cb159-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb159-3"><a href="#cb159-3" aria-hidden="true" tabindex="-1"></a><span class="fu">call2</span>(<span class="st">&quot;mean&quot;</span>, <span class="sc">!!!</span>args)  <span class="co"># Create the expression</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>mean(x = 1:10, na.rm = TRUE, trim = 0.1)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb161"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb161-1"><a href="#cb161-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mixed</span></span>
+<span id="cb161-2"><a href="#cb161-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb161-3"><a href="#cb161-3" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">na.rm =</span> <span class="cn">TRUE</span>, <span class="at">trim =</span> <span class="fl">0.1</span>)</span>
+<span id="cb161-4"><a href="#cb161-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb161-5"><a href="#cb161-5" aria-hidden="true" tabindex="-1"></a><span class="fu">exec</span>(<span class="st">&quot;mean&quot;</span>, <span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="sc">!!!</span>params)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5.5</code></pre>
+</div>
+</div>
+<p><code>rlang::exec()</code> also makes it possible to supply argument names indirectly:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb163"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb163-1"><a href="#cb163-1" aria-hidden="true" tabindex="-1"></a>arg_name <span class="ot">&lt;-</span> <span class="st">&quot;na.rm&quot;</span></span>
+<span id="cb163-2"><a href="#cb163-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb163-3"><a href="#cb163-3" aria-hidden="true" tabindex="-1"></a>arg_val <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb163-4"><a href="#cb163-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb163-5"><a href="#cb163-5" aria-hidden="true" tabindex="-1"></a><span class="fu">exec</span>(<span class="at">.fn =</span> <span class="st">&quot;mean&quot;</span>, <span class="at">x =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="cn">NA</span>), <span class="sc">!!</span><span class="at">arg_name :=</span> arg_val)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2</code></pre>
+</div>
+</div>
+<p>And finally, it’s useful if you have a vector of function names or a list of functions that you want to call with the same arguments:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb165"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb165-1"><a href="#cb165-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">runif</span>(<span class="dv">10</span>), <span class="cn">NA</span>)</span>
+<span id="cb165-2"><a href="#cb165-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb165-3"><a href="#cb165-3" aria-hidden="true" tabindex="-1"></a>funs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;median&quot;</span>, <span class="st">&quot;sd&quot;</span>)</span>
+<span id="cb165-4"><a href="#cb165-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb165-5"><a href="#cb165-5" aria-hidden="true" tabindex="-1"></a><span class="fu">map_dbl</span>(<span class="at">.x =</span> funs, <span class="at">.f =</span> \(.x) {</span>
+<span id="cb165-6"><a href="#cb165-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb165-7"><a href="#cb165-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exec</span>(<span class="at">.fn =</span> .x, <span class="at">x =</span> x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb165-8"><a href="#cb165-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb165-9"><a href="#cb165-9" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.6429902 0.6349359 0.1627402</code></pre>
+</div>
+</div>
+<p><code>exec()</code> is closely related to <code>call2()</code>; where <code>call2()</code> returns an expression, <code>exec()</code> evaluates it.</p>
+</section>
+<section id="dots_list" class="level3">
+<h3 class="anchored" data-anchor-id="dots_list"><code>dots_list()</code></h3>
+<p><code>list2()</code> provides one other handy feature: by default it will ignore any empty arguments at the end. This is useful in functions like <code>tibble::tibble()</code> because it means that you can easily change the order of variables without worrying about the final comma:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb167"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb167-1"><a href="#cb167-1" aria-hidden="true" tabindex="-1"></a>tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb167-2"><a href="#cb167-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,</span>
+<span id="cb167-3"><a href="#cb167-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">z =</span> <span class="dv">3</span><span class="sc">:-</span><span class="dv">1</span>,</span>
+<span id="cb167-4"><a href="#cb167-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">1</span>,  <span class="co"># Note here has a comma</span></span>
+<span id="cb167-5"><a href="#cb167-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 3
+      y     z     x
+  &lt;int&gt; &lt;int&gt; &lt;int&gt;
+1     1     3     5
+2     2     2     4
+3     3     1     3
+4     4     0     2
+5     5    -1     1</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb169"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb169-1"><a href="#cb169-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb169-2"><a href="#cb169-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">y =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,</span>
+<span id="cb169-3"><a href="#cb169-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">z =</span> <span class="dv">3</span><span class="sc">:-</span><span class="dv">1</span>,</span>
+<span id="cb169-4"><a href="#cb169-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> <span class="dv">5</span><span class="sc">:</span><span class="dv">1</span>,</span>
+<span id="cb169-5"><a href="#cb169-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
 </section>
 
 </main>
